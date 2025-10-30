@@ -1,0 +1,62 @@
+{
+   "name": "autobillai",
+   "version": "1.0.0",
+   "type": "module",
+   "description": "",
+   "main": "index.js",
+   "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1",
+      "dev": "concurrently \"npm run dev:server\" \"npm run dev --workspace=client\"",
+      "dev:server": "tsx watch server/index.ts",
+      "build:server": "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=server/dist",
+      "check:server": "node_modules/typescript/bin/tsc --project server/tsconfig.json"
+   },
+   "keywords": [],
+   "author": "",
+   "license": "ISC",
+   "workspaces": [
+      "client",
+      "server",
+      "shared"
+   ],
+   "dependencies": {
+      "@google/generative-ai": "^0.24.1",
+      "@lemonsqueezy/lemonsqueezy.js": "^4.0.0",
+      "cheerio": "^1.1.2",
+      "dotenv": "^17.2.3",
+      "drizzle-zod": "^0.8.3",
+      "express": "^5.1.0",
+      "express-session": "^1.18.2",
+      "helmet": "^8.1.0",
+      "http-proxy-middleware": "^3.0.5",
+      "memorystore": "^1.6.7",
+      "mongoose": "^8.4.1",
+      "passport": "^0.7.0",
+      "passport-local": "^1.0.0",
+      "stripe": "^19.1.0",
+      "ws": "^8.18.3",
+      "zod": "^4.1.12",
+      "zod-validation-error": "^4.0.2"
+   },
+   "devDependencies": {
+      "@tailwindcss/typography": "^0.5.19",
+      "@tailwindcss/vite": "^4.1.15",
+      "@types/bcrypt": "^6.0.0",
+      "@types/bcryptjs": "^3.0.0",
+      "@types/cheerio": "^0.22.35",
+      "@types/connect-pg-simple": "^7.0.3",
+      "@types/cookie-session": "^2.0.49",
+      "@types/cors": "^2.8.19",
+      "@types/express": "5.0.3",
+      "@types/express-session": "^1.18.2",
+      "@types/node": "24.9.1",
+      "@types/passport": "^1.0.17",
+      "@types/passport-local": "^1.0.38",
+      "@types/ws": "^8.18.1",
+      "concurrently": "^9.2.1",
+      "esbuild": "^0.25.11",
+      "tsx": "^4.20.6",
+      "typescript": "5.9.3",
+      "vite-tsconfig-paths": "^5.1.4"
+   }
+}

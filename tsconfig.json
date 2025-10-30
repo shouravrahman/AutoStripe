@@ -1,0 +1,16 @@
+{
+	"files": [],
+	"references": [{ "path": "./client" }, { "path": "./server" }],
+	"exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
+	"compilerOptions": {
+		"incremental": true,
+		"tsBuildInfoFile": "./.tsbuildinfo",
+		"module": "ESNext",
+		"strict": true,
+		"lib": ["esnext", "dom", "dom.iterable"],
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"moduleResolution": "bundler",
+		"types": ["node", "vite/client"]
+	}
+}
