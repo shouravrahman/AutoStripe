@@ -1,155 +1,81 @@
-import { useParams, useLocation } from "wouter";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useParams, Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/apiRequest";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Package, Key, Webhook, Badge } from "lucide-react";
-import { Link } from "wouter";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Package, Plus, ArrowLeft } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
-export default function ProjectDetails() {
-   const params = useParams();
-   const projectId = params.projectId;
-   const [, setLocation] = useLocation();
-   const queryClient = useQueryClient();
+const ProjectDetailsSkeleton = () => (
+    <div>
+        <Skeleton className="h-8 w-48 mb-2" />
+        <Skeleton className="h-5 w-64 mb-8" />
+        <div className="space-y-6">
+            <Card><CardHeader><Skeleton className="h-6 w-32" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /></CardContent></Card>
+            <Card><CardHeader><Skeleton className="h-6 w-32" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /></CardContent></Card>
+            <Card><CardHeader><Skeleton className="h-6 w-32" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /></CardContent></Card>
+        </div>
+    </div>
+);
 
-   const { data: project, isLoading: isLoadingProject, isError: isErrorProject, error: errorProject } = useQuery({
-      queryKey: ["project", projectId],
-      queryFn: () => apiRequest<any>("GET", `/api/projects/${projectId}`),
-      enabled: !!projectId,
-   });
+export default function ProjectDetailsPage() {
+    const { projectId } = useParams();
 
-   const { data: products, isLoading: isLoadingProducts, isError: isErrorProducts, error: errorProducts } = useQuery({
-      queryKey: ["products", projectId],
-      queryFn: () => apiRequest<any>("GET", `/api/products?projectId=${projectId}`),
-      enabled: !!projectId,
-   });
+    const { data: project, isLoading, isError, error } = useQuery({
+        queryKey: ["/api/projects", projectId],
+        queryFn: async () => (await apiRequest.get(`/api/projects/${projectId}`)).data,
+        enabled: !!projectId,
+    });
 
-   const { data: credentials, isLoading: isLoadingCredentials, isError: isErrorCredentials, error: errorCredentials } = useQuery({
-      queryKey: ["credentials", projectId],
-      queryFn: () => apiRequest<any>("GET", `/api/credentials?projectId=${projectId}`),
-      enabled: !!projectId,
-   });
+    const { data: products, isLoading: isLoadingProducts } = useQuery({
+        queryKey: ["/api/products", { projectId }],
+        queryFn: async () => (await apiRequest.get(`/api/products?projectId=${projectId}`)).data,
+        enabled: !!projectId,
+    });
 
-   const { data: webhooks, isLoading: isLoadingWebhooks, isError: isErrorWebhooks, error: errorWebhooks } = useQuery({
-      queryKey: ["webhooks", projectId],
-      queryFn: () => apiRequest<any>("GET", `/api/webhooks?projectId=${projectId}`),
-      enabled: !!projectId,
-   });
+    if (isError) return <div className="p-8">Error: {error.message}</div>;
 
-   if (isLoadingProject || isLoadingProducts || isLoadingCredentials || isLoadingWebhooks) {
-      return (
-         <div className="max-w-7xl mx-auto p-8">
-            <Skeleton className="h-8 w-1/2 mb-4" />
-            <Skeleton className="h-4 w-full mb-2" />
-            <Skeleton className="h-4 w-3/4" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-               <Card className="p-6"><Skeleton className="h-6 w-1/3 mb-4" /><Skeleton className="h-4 w-full" /></Card>
-               <Card className="p-6"><Skeleton className="h-6 w-1/3 mb-4" /><Skeleton className="h-4 w-full" /></Card>
-            </div>
-         </div>
-      );
-   }
-
-   if (isErrorProject) {
-      return (
-         <div className="max-w-7xl mx-auto p-8 text-red-500">
-            Error loading project: {errorProject?.message}
-         </div>
-      );
-   }
-
-   if (!project) {
-      return (
-         <div className="max-w-7xl mx-auto p-8 text-muted-foreground">
-            Project not found.
-         </div>
-      );
-   }
-
-   return (
-      <div className="max-w-7xl mx-auto p-8">
-         <div className="flex items-center justify-between mb-8">
-            <div>
-               <h1 className="text-3xl font-bold mb-2">{project.name}</h1>
-               <p className="text-muted-foreground">{project.description || "No description"}</p>
-            </div>
-            <Link href={`/dashboard/projects/${projectId}/edit`}>
-               <Button variant="outline">Edit Project</Button>
-            </Link>
-         </div>
-
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <Card className="p-6">
-               <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold">Products</h2>
-                  <Link href={`/dashboard/projects/${projectId}/products/new`}>
-                     <Button size="sm"><Plus className="h-4 w-4 mr-2" /> New Product</Button>
-                  </Link>
-               </div>
-               {isLoadingProducts ? (
-                  <Skeleton className="h-24 w-full" />
-               ) : products && products.length > 0 ? (
-                  <div className="space-y-4">
-                     {products.map((product: any) => (
-                        <div key={product.id} className="flex items-center justify-between">
-                           <Link href={`/dashboard/products/${product.id}`}>
-                              <span className="font-medium hover:underline cursor-pointer">{product.name}</span>
-                           </Link>
-                           <Badge>{product.status}</Badge>
-                        </div>
-                     ))}
-                  </div>
-               ) : (
-                  <p className="text-muted-foreground">No products yet. Create one to get started.</p>
-               )}
-            </Card>
-
-            <Card className="p-6">
-               <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold">API Credentials</h2>
-                  <Link href={`/dashboard/credentials?projectId=${projectId}`}>
-                     <Button size="sm"><Plus className="h-4 w-4 mr-2" /> Add Credential</Button>
-                  </Link>
-               </div>
-               {isLoadingCredentials ? (
-                  <Skeleton className="h-24 w-full" />
-               ) : credentials && credentials.length > 0 ? (
-                  <div className="space-y-4">
-                     {credentials.map((credential: any) => (
-                        <div key={credential.id} className="flex items-center justify-between">
-                           <span className="font-medium">{credential.platform}</span>
-                           <Badge>{credential.status}</Badge>
-                        </div>
-                     ))}
-                  </div>
-               ) : (
-                  <p className="text-muted-foreground">No credentials connected for this project.</p>
-               )}
-            </Card>
-         </div>
-
-         {/* Webhooks Section */}
-         <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-               <h2 className="text-xl font-semibold">Webhooks</h2>
-               <Button size="sm" variant="outline"><Plus className="h-4 w-4 mr-2" /> Add Webhook</Button>
-            </div>
-            {isLoadingWebhooks ? (
-               <Skeleton className="h-24 w-full" />
-            ) : webhooks && webhooks.length > 0 ? (
-               <div className="space-y-4">
-                  {webhooks.map((webhook: any) => (
-                     <div key={webhook.id} className="flex items-center justify-between">
-                        <span className="font-medium">{webhook.url}</span>
-                        <Badge >{webhook.provider}</Badge>
-                     </div>
-                  ))}
-               </div>
-            ) : (
-               <p className="text-muted-foreground">No webhooks configured for this project.</p>
+    return (
+        <DashboardLayout 
+            title={isLoading ? "Loading..." : project?.name}
+            description={isLoading ? "" : (project?.description || 'No description provided.')}
+            breadcrumbs={[
+                { label: "Projects", href: "/dashboard/projects" },
+                { label: project?.name || "..." }
+            ]}
+            headerActions={<Button variant="outline" asChild><Link href={`/dashboard/projects/${projectId}/edit`}>Edit Project</Link></Button>}
+        >
+            {isLoading ? <ProjectDetailsSkeleton /> : (
+                <div className="space-y-8">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div><CardTitle>Products</CardTitle><CardDescription>Digital products and services.</CardDescription></div>
+                            <Button asChild size="sm"><Link href={`/dashboard/products/new?projectId=${projectId}`}><Plus className="h-4 w-4 mr-2"/>New Product</Link></Button>
+                        </CardHeader>
+                        <CardContent>
+                            {isLoadingProducts ? <Skeleton className="h-10"/> : products?.length > 0 ? (
+                                <div className="divide-y">
+                                    {products.map(p => (
+                                        <Link key={p.id} href={`/dashboard/products/${p.id}`}>
+                                            <div className="p-3 flex items-center justify-between hover:bg-muted/50 cursor-pointer">
+                                                <p className="font-medium">{p.name}</p>
+                                                <Badge variant="secondary">{p.stripeProductId ? 'Stripe' : 'LemonSqueezy'}</Badge>
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                                    <Package className="mx-auto h-10 w-10 text-muted-foreground/50"/>
+                                    <p className="mt-4 text-sm text-muted-foreground">No products have been created for this project yet.</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
             )}
-         </Card>
-      </div>
-   );
+        </DashboardLayout>
+    );
 }

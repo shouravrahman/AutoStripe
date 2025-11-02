@@ -1,94 +1,108 @@
-import { useLocation, useParams } from "wouter";
+import { useLocation, useParams, Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Copy } from "lucide-react";
+import { ArrowLeft, Copy, Check, Zap, LayoutDashboard, Folder, Package, Key, Settings, LogOut, FileCode } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useState } from "react";
 
-export default function GenerationGuide() {
-  const { projectId } = useParams();
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
+const menuItems = [
+    { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+    { icon: Folder, label: "Projects", href: "/dashboard/projects" },
+    { icon: Package, label: "Products", href: "/dashboard/products" },
+    { icon: Key, label: "API Credentials", href: "/dashboard/credentials" },
+    { icon: Settings, label: "Settings", href: "/dashboard/settings" },
+];
 
-  const { generatedCode, product } = (history.state as any) || {};
+const CodeBlock = ({ code }) => {
+    const { toast } = useToast();
+    const [hasCopied, setHasCopied] = useState(false);
 
-  if (!generatedCode || !product || Object.keys(generatedCode).length === 0) {
+    const copyToClipboard = () => {
+        navigator.clipboard.writeText(code);
+        setHasCopied(true);
+        toast({ title: "Code copied to clipboard!" });
+        setTimeout(() => setHasCopied(false), 2000);
+    };
+
     return (
-      <div className="max-w-4xl mx-auto p-8 text-center">
-        <h2 className="text-2xl font-bold mb-4">Nothing to see here!</h2>
-        <p className="text-muted-foreground mb-6">
-          It looks like you arrived here directly. You need to generate a product first.
-        </p>
-        <Button onClick={() => setLocation(`/dashboard/projects/${projectId}`)}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Project
-        </Button>
-      </div>
+        <div className="bg-background rounded-lg border relative">
+            <pre className="p-4 text-sm overflow-x-auto"><code className="font-mono">{code}</code></pre>
+            <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8" onClick={copyToClipboard}>
+                {hasCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            </Button>
+        </div>
     );
-  }
+};
 
-  const filePaths = Object.keys(generatedCode);
+export default function GenerationGuidePage() {
+    const { projectId } = useParams();
+    const { state } = useLocation();
+    const { generatedCode, product } = state || {};
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: "Copied to clipboard!" });
-  };
-
-  return (
-    <div className="max-w-4xl mx-auto p-8">
-      <Button
-        variant="ghost"
-        onClick={() => setLocation(`/dashboard/projects/${projectId}`)}
-        className="mb-6"
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Project
-      </Button>
-
-      <h1 className="text-3xl font-bold mb-2">Your code is ready!</h1>
-      <p className="text-muted-foreground mb-8">
-        You've successfully created the product "{product.name}". Below are the generated files. Follow the `TODO` comments in each file to integrate them into your project.
-      </p>
-
-      <Tabs defaultValue={filePaths[0]} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          {filePaths.map((path) => (
-            <TabsTrigger key={path} value={path}>{path}</TabsTrigger>
-          ))}
-        </TabsList>
-
-        {filePaths.map((path) => (
-          <TabsContent key={path} value={path}>
-            <Card>
-              <div className="p-4 border-b flex justify-between items-center">
-                <h3 className="font-semibold">{path}</h3>
-                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedCode[path])}>
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copy Code
-                </Button>
-              </div>
-              <div className="bg-zinc-900 text-zinc-100 font-mono text-sm overflow-x-auto rounded-b-lg p-4">
-                <pre className="whitespace-pre-wrap leading-relaxed">
-                  <code>{generatedCode[path]}</code>
-                </pre>
-              </div>
-            </Card>
-          </TabsContent>
-        ))}
-      </Tabs>
-
-       <Card className="p-8 mt-8">
-            <h2 className="text-2xl font-bold mb-6">Next Steps</h2>
-             <div className="prose prose-invert max-w-none">
-                <ol>
-                    <li><strong>Review Environment Variables:</strong> Start with the <code>.env.example</code> file. Copy these variables into your own <code>.env.local</code> file and fill them with your actual keys from Stripe and/or Lemon Squeezy.</li>
-                    <li><strong>Integrate Subscription Logic:</strong> Open <code>lib/subscription.ts</code>. This file contains helper functions to check a user's subscription status. You MUST edit this file to connect to your real authentication (e.g., NextAuth.js, Clerk) and your database (e.g., Prisma, Drizzle).</li>
-                    <li><strong>Implement Checkout Routes:</strong> The files in <code>app/api/.../checkout/</code> create payment links. You will need to call these API routes from your frontend pricing page to initiate a purchase.</li>
-                    <li><strong>Deploy Webhook Handlers:</strong> The files in <code>app/api/.../webhook/</code> are critical. Deploy your project and enter the full URL of these routes into your Stripe and/or Lemon Squeezy dashboard. These handlers listen for events (like successful payments) and update your database.</li>
-                    <li><strong>Protect Your Content:</strong> Use the <code>hasActiveSubscription()</code> function from <code>lib/subscription.ts</code> in your server components and API routes to protect premium content.</li>
-                </ol>
+    if (!generatedCode || !product) {
+        return (
+            <div className="flex flex-col items-center justify-center h-screen text-center">
+                <FileCode className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                <h1 className="text-2xl font-bold">No Code Generated</h1>
+                <p className="text-muted-foreground mt-2">Please go back and generate a product first.</p>
+                <Button asChild className="mt-6"><Link href={`/dashboard/projects/${projectId || ''}`}><ArrowLeft className="h-4 w-4 mr-2" />Back to Project</Link></Button>
             </div>
-        </Card>
-    </div>
-  );
+        );
+    }
+
+    const filePaths = Object.keys(generatedCode);
+
+    return (
+        <SidebarProvider>
+            <div className="flex h-screen w-full bg-muted/40">
+                <Sidebar>
+                    <SidebarContent>
+                        <div className="p-4 border-b"><Link href="/"><div className="flex items-center gap-2 cursor-pointer"><Zap className="h-6 w-6 text-primary" /><span className="text-xl font-bold">AutoBill</span></div></Link></div>
+                        <div className="p-4">
+                            <SidebarGroup><SidebarGroupLabel>Main Menu</SidebarGroupLabel><SidebarGroupContent><SidebarMenu>{menuItems.map((item) => (<SidebarMenuItem key={item.href}><SidebarMenuButton asChild><Link href={item.href}><item.icon className="h-5 w-5 mr-2" /><span>{item.label}</span></Link></SidebarMenuButton></SidebarMenuItem>))}</SidebarMenu></SidebarGroupContent></SidebarGroup>
+                        </div>
+                        <div className="p-4 mt-auto border-t"><Button variant="ghost" className="w-full justify-start"><LogOut className="h-4 w-4 mr-2" />Log out</Button></div>
+                    </SidebarContent>
+                </Sidebar>
+                <div className="flex flex-col flex-1">
+                    <header className="flex items-center justify-between p-4 border-b bg-background h-16"><SidebarTrigger /><ThemeToggle /></header>
+                    <main className="flex-1 overflow-auto p-4 sm:p-8">
+                        <div className="max-w-4xl mx-auto">
+                            <div className="mb-8">
+                                <Button variant="ghost" asChild className="mb-4"><Link href={`/dashboard/products/${product.id}`}><ArrowLeft className="h-4 w-4 mr-2" />Back to Product</Link></Button>
+                                <h1 className="text-3xl font-extrabold tracking-tight">Implementation Guide</h1>
+                                <p className="text-muted-foreground">Code for "{product.name}" has been generated. Follow the steps below.</p>
+                            </div>
+
+                            <Card className="mb-8">
+                                <CardHeader><CardTitle>1. Review Generated Code</CardTitle><CardDescription>The following files have been created. Integrate them into your existing codebase.</CardDescription></CardHeader>
+                                <CardContent>
+                                    <Tabs defaultValue={filePaths[0]}>
+                                        <TabsList className="grid w-full grid-cols-3 mb-4"><{filePaths.map(p => <TabsTrigger key={p} value={p}>{p.split('/').pop()}</TabsTrigger>)}</TabsList>
+                                        {filePaths.map(p => <TabsContent key={p} value={p}><CodeBlock code={generatedCode[p]} /></TabsContent>)}
+                                    </Tabs>
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardHeader><CardTitle>2. Next Steps</CardTitle><CardDescription>Follow these instructions to complete the integration.</CardDescription></CardHeader>
+                                <CardContent className="prose prose-sm max-w-none dark:prose-invert">
+                                    <ol>
+                                        <li><strong>Environment Variables:</strong> Copy the variables from <code>.env.example</code> into your project's <code>.env.local</code> file and replace the placeholder values with your actual API keys.</li>
+                                        <li><strong>Subscription Logic:</strong> Open <code>lib/subscription.ts</code> and modify the <code>getUser()</code> and <code>hasActiveSubscription()</code> functions to work with your application's authentication and database.</li>
+                                        <li><strong>Checkout UI:</strong> Implement a pricing page or button that calls the API route in <code>app/api/.../checkout/route.ts</code> to redirect users to a payment link.</li>
+                                        <li><strong>Webhook Deployment:</strong> Deploy your application and add the full URL of the <code>app/api/.../webhook/route.ts</code> to your Stripe or LemonSqueezy dashboard. This is crucial for receiving payment events.</li>
+                                        <li><strong>Protect Content:</strong> Use the <code>hasActiveSubscription()</code> helper to protect premium features and content throughout your application.</li>
+                                    </ol>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </main>
+                </div>
+            </div>
+        </SidebarProvider>
+    );
 }
