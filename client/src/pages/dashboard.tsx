@@ -1,11 +1,10 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/apiRequest";
-import { DollarSign, FolderOpen, Key, Activity, Plus } from "lucide-react";
+import { DollarSign, FolderOpen, Package, Activity, Plus, Zap } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
 const StatCard = ({ title, value, icon: Icon, isLoading }) => (
     <Card>
@@ -20,22 +19,19 @@ const StatCard = ({ title, value, icon: Icon, isLoading }) => (
 );
 
 export default function Dashboard() {
-   const { data: stats, isLoading, isError, error } = useQuery({
-     queryKey: ["/api/stats"],
-     queryFn: async () => {
-        const response = await apiRequest.get("/api/stats");
-        return response.data;
-     },
+   const { data: stats, isLoading, isError, error } = useQuery<any>({
+     queryKey: ["stats"],
+     queryFn: () => apiRequest("GET", "/api/stats"),
   });
 
    if (isError) {
       return (
-         <div className="flex items-center justify-center h-screen text-destructive">Error: {error.message}</div>
+         <div className="flex items-center justify-center h-full text-destructive">Error: {(error as Error).message}</div>
       );
    }
 
   return (
-    <DashboardLayout>
+    <div>
         <div className="flex items-center justify-between mb-8">
             <div>
                 <h1 className="text-3xl font-extrabold tracking-tight">Dashboard</h1>
@@ -74,6 +70,6 @@ export default function Dashboard() {
                 )}
             </CardContent>
         </Card>
-    </DashboardLayout>
+    </div>
   );
 }

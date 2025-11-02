@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/apiRequest";
 import { Badge } from "@/components/ui/badge";
-import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
 interface Product {
    id: string;
@@ -50,17 +49,21 @@ const EmptyState = () => (
 );
 
 export default function ProductsList() {
-   const { data: products, isLoading, isError, error } = useQuery<Product[]>(({
-      queryKey: ["/api/products"],
-      queryFn: async () => (await apiRequest.get("/api/products")).data,
-   }));
+   const { data: products, isLoading, isError, error } = useQuery<Product[]>({
+      queryKey: ["products"],
+      queryFn: () => apiRequest("GET", "/api/products"),
+   });
 
    if (isError) {
-      return <div className="p-8">Error: {error.message}</div>;
+      return <div className="p-8">Error: {(error as Error).message}</div>;
    }
 
    return (
-    <DashboardLayout title="Products" description="Manage all products generated across your projects.">
+    <div>
+         <div className="mb-8">
+            <h1 className="text-3xl font-extrabold tracking-tight">Products</h1>
+            <p className="text-muted-foreground">Manage all products generated across your projects.</p>
+        </div>
         {isLoading ? (
             <ProductListSkeleton />
         ) : products && products.length > 0 ? (
@@ -92,6 +95,6 @@ export default function ProductsList() {
         ) : (
             <EmptyState />
         )}
-    </DashboardLayout>
+    </div>
    );
 }

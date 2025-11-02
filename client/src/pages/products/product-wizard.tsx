@@ -48,13 +48,13 @@ export default function ProductWizardPage() {
     const [integrations, setIntegrations] = useState({ stripe: true, lemonsqueezy: false });
 
     const mutation = useMutation({
-        mutationFn: (newData) => apiRequest.post('/api/ai/generate-product', newData),
-        onSuccess: (data) => {
+        mutationFn: (newData: any) => apiRequest("POST", '/api/ai/generate-product', newData),
+        onSuccess: (data: any) => {
             toast({ title: "Product Generation Complete", description: 'Code has been generated successfully.' });
-            queryClient.invalidateQueries({ queryKey: ['/api/products', { projectId }] });
-            setLocation(`/dashboard/products/${data.data.product.id}/guide`, { state: { generatedCode: data.data.code, product: data.data.product } });
+            queryClient.invalidateQueries({ queryKey: ['products', { projectId }] });
+            setLocation(`/dashboard/products/${data.product.id}/guide`);
         },
-        onError: (err) => toast({ title: 'Generation Failed', description: err.message, variant: 'destructive' })
+        onError: (err: Error) => toast({ title: 'Generation Failed', description: err.message, variant: 'destructive' })
     });
 
     const handleTemplateSelect = (templateId) => {
@@ -78,95 +78,79 @@ export default function ProductWizardPage() {
     const steps = ['Template', 'Details', 'Pricing', 'Tech', 'Review'];
 
     return (
-        <SidebarProvider>
-            <div className="flex h-screen w-full bg-muted/40">
-                 <Sidebar>
-                    <SidebarContent>
-                        <div className="p-4 border-b"><Link href="/"><div className="flex items-center gap-2 cursor-pointer"><Zap className="h-6 w-6 text-primary" /><span className="text-xl font-bold">AutoBill</span></div></Link></div>
-                        <div className="p-4"><SidebarGroup><SidebarGroupLabel>Main Menu</SidebarGroupLabel><SidebarGroupContent><SidebarMenu>{menuItems.map((item) => (<SidebarMenuItem key={item.href}><SidebarMenuButton asChild><Link href={item.href}><item.icon className="h-5 w-5 mr-2" /><span>{item.label}</span></Link></SidebarMenuButton></SidebarMenuItem>))}</SidebarMenu></SidebarGroupContent></SidebarGroup></div>
-                        <div className="p-4 mt-auto border-t"><Button variant="ghost" className="w-full justify-start"><LogOut className="h-4 w-4 mr-2" />Log out</Button></div>
-                    </SidebarContent>
-                </Sidebar>
-                <div className="flex flex-col flex-1">
-                    <header className="flex items-center justify-between p-4 border-b bg-background h-16"><SidebarTrigger /><ThemeToggle /></header>
-                    <main className="flex-1 overflow-auto p-4 sm:p-8">
-                        <div className="max-w-3xl mx-auto">
-                            <Button variant="ghost" asChild className="mb-4"><Link href={`/dashboard/projects/${projectId}`}><ArrowLeft className="h-4 w-4 mr-2" />Back to Project</Link></Button>
-                            <div className="flex justify-around items-center my-8 p-4 bg-background rounded-lg shadow-sm">{steps.map((s, i) => <ProgressStep key={i} num={i + 1} label={s} isActive={step >= i} />)}</div>
-                            
-                            {step === 0 && (
-                                <Card>
-                                    <CardHeader><CardTitle>Choose a Template</CardTitle><CardDescription>Select a starting point for your product.</CardDescription></CardHeader>
-                                    <CardContent className="grid md:grid-cols-3 gap-4">
-                                        {templates.map(t => (
-                                            <Card key={t.id} className={`p-6 cursor-pointer hover:border-primary ${t.id === 'custom' ? 'md:col-span-3' : ''}`} onClick={() => handleTemplateSelect(t.id)}>
-                                                <h3 className="font-bold">{t.name}</h3>
-                                                <p className="text-sm text-muted-foreground">{t.description}</p>
-                                            </Card>
-                                        ))}
-                                    </CardContent>
-                                </Card>
-                            )}
+        <div className="max-w-3xl mx-auto">
+            <Button variant="ghost" asChild className="mb-4"><Link href={`/dashboard/projects/${projectId}`}><ArrowLeft className="h-4 w-4 mr-2" />Back to Project</Link></Button>
+            <div className="flex justify-around items-center my-8 p-4 bg-background rounded-lg shadow-sm">{steps.map((s, i) => <ProgressStep key={i} num={i + 1} label={s} isActive={step >= i} />)}</div>
+            
+            {step === 0 && (
+                <Card>
+                    <CardHeader><CardTitle>Choose a Template</CardTitle><CardDescription>Select a starting point for your product.</CardDescription></CardHeader>
+                    <CardContent className="grid md:grid-cols-3 gap-4">
+                        {templates.map(t => (
+                            <Card key={t.id} className={`p-6 cursor-pointer hover:border-primary ${t.id === 'custom' ? 'md:col-span-3' : ''}`} onClick={() => handleTemplateSelect(t.id)}>
+                                <h3 className="font-bold">{t.name}</h3>
+                                <p className="text-sm text-muted-foreground">{t.description}</p>
+                            </Card>
+                        ))}
+                    </CardContent>
+                </Card>
+            )}
 
-                            {step === 1 && (
-                                <Card>
-                                    <CardHeader><CardTitle>Product Details</CardTitle><CardDescription>Give your product a name and description.</CardDescription></CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <div className="space-y-2"><Label htmlFor="name">Product Name</Label><Input id="name" value={productData.name} onChange={e => setProductData({...productData, name: e.target.value})} placeholder="e.g., My Awesome Product" /></div>
-                                        <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" value={productData.description} onChange={e => setProductData({...productData, description: e.target.value})} placeholder="A short summary of your product."/></div>
-                                    </CardContent>
-                                    <CardFooter className="flex justify-between"><Button variant="outline" onClick={() => setStep(0)}>Back</Button><Button onClick={() => setStep(2)} disabled={!productData.name}>Next <ArrowRight className="ml-2 h-4 w-4"/></Button></CardFooter>
-                                </Card>
-                            )}
+            {step === 1 && (
+                <Card>
+                    <CardHeader><CardTitle>Product Details</CardTitle><CardDescription>Give your product a name and description.</CardDescription></CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2"><Label htmlFor="name">Product Name</Label><Input id="name" value={productData.name} onChange={e => setProductData({...productData, name: e.target.value})} placeholder="e.g., My Awesome Product" /></div>
+                        <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" value={productData.description} onChange={e => setProductData({...productData, description: e.target.value})} placeholder="A short summary of your product."/></div>
+                    </CardContent>
+                    <CardFooter className="flex justify-between"><Button variant="outline" onClick={() => setStep(0)}>Back</Button><Button onClick={() => setStep(2)} disabled={!productData.name}>Next <ArrowRight className="ml-2 h-4 w-4"/></Button></CardFooter>
+                </Card>
+            )}
 
-                            {step === 2 && (
-                                <Card>
-                                    <CardHeader><CardTitle>Pricing Plans</CardTitle><CardDescription>Define the pricing tiers for your product.</CardDescription></CardHeader>
-                                    <CardContent className="space-y-4">
-                                        {variants.map((v, i) => (
-                                            <Card key={i} className="p-4 bg-muted/50"><div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2"><Label>Plan Name</Label><Input value={v.name} onChange={e => handleUpdateVariant(i, 'name', e.target.value)} /></div>
-                                                <div className="space-y-2"><Label>Price (in cents)</Label><Input type="number" value={v.price} onChange={e => handleUpdateVariant(i, 'price', parseInt(e.target.value))}/></div>
-                                                <div className="space-y-2"><Label>Billing Interval</Label><Select value={v.interval} onValueChange={val => handleUpdateVariant(i, 'interval', val)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="month">Monthly</SelectItem><SelectItem value="year">Yearly</SelectItem><SelectItem value="once">One-time</SelectItem></SelectContent></Select></div>
-                                                <div className="flex items-center space-x-2 pt-6"><Checkbox id={`usage-${i}`} checked={v.isUsageBased} onCheckedChange={val => handleUpdateVariant(i, 'isUsageBased', val)}/><Label htmlFor={`usage-${i}`}>Is Usage-Based?</Label></div>
-                                            </div><Button variant="ghost" size="sm" className="mt-2 text-destructive" onClick={() => handleRemoveVariant(i)}>Remove Plan</Button></Card>
-                                        ))}
-                                        <Button variant="outline" className="w-full" onClick={handleAddVariant}>Add Plan</Button>
-                                    </CardContent>
-                                    <CardFooter className="flex justify-between"><Button variant="outline" onClick={() => setStep(1)}>Back</Button><Button onClick={() => setStep(3)}>Next <ArrowRight className="ml-2 h-4 w-4"/></Button></CardFooter>
-                                </Card>
-                            )}
+            {step === 2 && (
+                <Card>
+                    <CardHeader><CardTitle>Pricing Plans</CardTitle><CardDescription>Define the pricing tiers for your product.</CardDescription></CardHeader>
+                    <CardContent className="space-y-4">
+                        {variants.map((v, i) => (
+                            <Card key={i} className="p-4 bg-muted/50"><div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2"><Label>Plan Name</Label><Input value={v.name} onChange={e => handleUpdateVariant(i, 'name', e.target.value)} /></div>
+                                <div className="space-y-2"><Label>Price (in cents)</Label><Input type="number" value={v.price} onChange={e => handleUpdateVariant(i, 'price', parseInt(e.target.value))}/></div>
+                                <div className="space-y-2"><Label>Billing Interval</Label><Select value={v.interval} onValueChange={val => handleUpdateVariant(i, 'interval', val)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="month">Monthly</SelectItem><SelectItem value="year">Yearly</SelectItem><SelectItem value="once">One-time</SelectItem></SelectContent></Select></div>
+                                <div className="flex items-center space-x-2 pt-6"><Checkbox id={`usage-${i}`} checked={v.isUsageBased} onCheckedChange={val => handleUpdateVariant(i, 'isUsageBased', val)}/><Label htmlFor={`usage-${i}`}>Is Usage-Based?</Label></div>
+                            </div><Button variant="ghost" size="sm" className="mt-2 text-destructive" onClick={() => handleRemoveVariant(i)}>Remove Plan</Button></Card>
+                        ))}
+                        <Button variant="outline" className="w-full" onClick={handleAddVariant}>Add Plan</Button>
+                    </CardContent>
+                    <CardFooter className="flex justify-between"><Button variant="outline" onClick={() => setStep(1)}>Back</Button><Button onClick={() => setStep(3)}>Next <ArrowRight className="ml-2 h-4 w-4"/></Button></CardFooter>
+                </Card>
+            )}
 
-                             {step === 3 && (
-                                <Card>
-                                    <CardHeader><CardTitle>Tech Stack & Integrations</CardTitle><CardDescription>Choose your backend and payment providers.</CardDescription></CardHeader>
-                                    <CardContent className="space-y-6">
-                                        <div className="space-y-2"><Label>Backend Framework</Label><Select value={techStack.backend} onValueChange={val => setTechStack({ backend: val })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="nextjs-api">Next.js (API Routes)</SelectItem><SelectItem value="nodejs-express">Node.js (Express)</SelectItem></SelectContent></Select></div>
-                                        <div className="space-y-2"><Label>Payment Providers</Label><div className="space-y-2">
-                                            <div className="flex items-center gap-2 p-4 border rounded-lg"><Checkbox id="stripe" checked={integrations.stripe} onCheckedChange={val => setIntegrations({...integrations, stripe: val })}/><Label htmlFor="stripe">Stripe</Label></div>
-                                            <div className="flex items-center gap-2 p-4 border rounded-lg"><Checkbox id="lemonsqueezy" checked={integrations.lemonsqueezy} onCheckedChange={val => setIntegrations({...integrations, lemonsqueezy: val })}/><Label htmlFor="lemonsqueezy">Lemon Squeezy</Label></div>
-                                        </div></div>
-                                    </CardContent>
-                                    <CardFooter className="flex justify-between"><Button variant="outline" onClick={() => setStep(2)}>Back</Button><Button onClick={() => setStep(4)}>Next <ArrowRight className="ml-2 h-4 w-4"/></Button></CardFooter>
-                                </Card>
-                            )}
+                {step === 3 && (
+                <Card>
+                    <CardHeader><CardTitle>Tech Stack & Integrations</CardTitle><CardDescription>Choose your backend and payment providers.</CardDescription></CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="space-y-2"><Label>Backend Framework</Label><Select value={techStack.backend} onValueChange={val => setTechStack({ backend: val })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="nextjs-api">Next.js (API Routes)</SelectItem><SelectItem value="nodejs-express">Node.js (Express)</SelectItem></SelectContent></Select></div>
+                        <div className="space-y-2"><Label>Payment Providers</Label><div className="space-y-2">
+                            <div className="flex items-center gap-2 p-4 border rounded-lg"><Checkbox id="stripe" checked={integrations.stripe} onCheckedChange={val => setIntegrations({...integrations, stripe: !!val })}/><Label htmlFor="stripe">Stripe</Label></div>
+                            <div className="flex items-center gap-2 p-4 border rounded-lg"><Checkbox id="lemonsqueezy" checked={integrations.lemonsqueezy} onCheckedChange={val => setIntegrations({...integrations, lemonsqueezy: !!val })}/><Label htmlFor="lemonsqueezy">Lemon Squeezy</Label></div>
+                        </div></div>
+                    </CardContent>
+                    <CardFooter className="flex justify-between"><Button variant="outline" onClick={() => setStep(2)}>Back</Button><Button onClick={() => setStep(4)}>Next <ArrowRight className="ml-2 h-4 w-4"/></Button></CardFooter>
+                </Card>
+            )}
 
-                            {step === 4 && (
-                                <Card>
-                                    <CardHeader><CardTitle>Review and Generate</CardTitle><CardDescription>Confirm your settings before generating the code.</CardDescription></CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <div><h4 className="font-semibold">Product:</h4><p>{productData.name}</p></div>
-                                        <div><h4 className="font-semibold">Plans:</h4><ul className="list-disc list-inside">{variants.map((v, i) => <li key={i}>{v.name} - ${(v.price/100).toFixed(2)}/{v.interval}</li>)}</ul></div>
-                                        <div><h4 className="font-semibold">Backend:</h4><p>{techStack.backend}</p></div>
-                                        <div><h4 className="font-semibold">Providers:</h4><p>{Object.entries(integrations).filter(([,v]) => v).map(([k]) => k).join(', ')}</p></div>
-                                    </CardContent>
-                                    <CardFooter className="flex justify-between"><Button variant="outline" onClick={() => setStep(3)}>Back</Button><Button onClick={handleSubmit} disabled={mutation.isPending}>{mutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Generating...</> : <><Wand2 className="mr-2 h-4 w-4"/>Generate Code</>}</Button></CardFooter>
-                                </Card>
-                            )}
-                        </div>
-                    </main>
-                </div>
-            </div>
-        </SidebarProvider>
+            {step === 4 && (
+                <Card>
+                    <CardHeader><CardTitle>Review and Generate</CardTitle><CardDescription>Confirm your settings before generating the code.</CardDescription></CardHeader>
+                    <CardContent className="space-y-4">
+                        <div><h4 className="font-semibold">Product:</h4><p>{productData.name}</p></div>
+                        <div><h4 className="font-semibold">Plans:</h4><ul className="list-disc list-inside">{variants.map((v, i) => <li key={i}>{v.name} - ${(v.price/100).toFixed(2)}/{v.interval}</li>)}</ul></div>
+                        <div><h4 className="font-semibold">Backend:</h4><p>{techStack.backend}</p></div>
+                        <div><h4 className="font-semibold">Providers:</h4><p>{Object.entries(integrations).filter(([,v])  => v).map(([k]) => k).join(', ')}</p></div>
+                    </CardContent>
+                    <CardFooter className="flex justify-between"><Button variant="outline" onClick={() => setStep(3)}>Back</Button><Button onClick={handleSubmit} disabled={mutation.isPending}>{mutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Generating...</> : <><Wand2 className="mr-2 h-4 w-4"/>Generate Code</>}</Button></CardFooter>
+                </Card>
+            )}
+        </div>
     );
 }

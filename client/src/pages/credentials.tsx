@@ -13,7 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/apiRequest";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
 const EmptyState = ({ onAddClick }) => (
     <div className="text-center p-12 border-2 border-dashed rounded-lg">
@@ -41,20 +40,20 @@ const AddEditCredentialDialog = ({ open, setOpen, credential }) => {
     }, [credential, open]);
 
     const mutation = useMutation({
-        mutationFn: (data) => credential 
-            ? apiRequest.patch(`/api/credentials/${credential.id}`, data)
-            : apiRequest.post("/api/credentials", data),
+        mutationFn: (data: any) => credential 
+            ? apiRequest("PATCH", `/api/credentials/${credential.id}`, data)
+            : apiRequest("POST", "/api/credentials", data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['/api/credentials'] });
+            queryClient.invalidateQueries({ queryKey: ['credentials'] });
             toast({ title: credential ? "Credential updated!" : "Credential added!" });
             setOpen(false);
         },
-        onError: (error) => toast({ title: "An error occurred", description: error.message, variant: "destructive" }),
+        onError: (error: Error) => toast({ title: "An error occurred", description: error.message, variant: "destructive" }),
     });
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const payload = {
+        const payload: any = {
             provider,
             label: formData.label || `My ${provider.charAt(0).toUpperCase() + provider.slice(1)} Account`,
             apiKey: formData.apiKey,
@@ -145,15 +144,15 @@ export default function CredentialsPage() {
    const [editingCredential, setEditingCredential] = useState(null);
    const [deletingId, setDeletingId] = useState<string | null>(null);
 
-   const { data: credentials, isLoading, isError, error } = useQuery({
-     queryKey: ["/api/credentials"],
-     queryFn: async () => (await apiRequest.get("/api/credentials")).data,
+   const { data: credentials, isLoading, isError, error } = useQuery<any[]>({
+     queryKey: ["credentials"],
+     queryFn: () => apiRequest("GET", "/api/credentials"),
    });
 
-   const deleteMutation = useMutation({
-     mutationFn: (id: string) => apiRequest.delete(`/api/credentials/${id}`),
+   const deleteMutation = useMutation<void, Error, string>({
+     mutationFn: (id: string) => apiRequest("DELETE", `/api/credentials/${id}`),
      onSuccess: () => {
-       queryClient.invalidateQueries({ queryKey: ['/api/credentials'] });
+       queryClient.invalidateQueries({ queryKey: ['credentials'] });
        toast({ title: "Credential deleted" });
        setDeletingId(null);
      },
@@ -165,15 +164,15 @@ export default function CredentialsPage() {
         setDialogOpen(true);
     }
 
-    const handleEditClick = (cred) => {
+    const handleEditClick = (cred: any) => {
         setEditingCredential(cred);
         setDialogOpen(true);
     }
 
-    if (isError) return <div className="p-8">Error: {error.message}</div>;
+    if (isError) return <div className="p-8">Error: {(error as Error).message}</div>;
 
    return (
-    <DashboardLayout title="API Credentials" description="Manage your connections to payment providers.">
+    <div>
         <div className="flex items-center justify-end mb-8">
             <Button onClick={handleAddClick}><Plus className="h-4 w-4 mr-2" />Add New</Button>
         </div>
@@ -204,6 +203,6 @@ export default function CredentialsPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-    </DashboardLayout>
+    </div>
    );
 }

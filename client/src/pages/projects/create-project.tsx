@@ -16,7 +16,7 @@ export default function CreateProject() {
 
    const createProjectMutation = useMutation({
       mutationFn: (newProject: { name: string }) =>
-         apiRequest<any>("POST", "/api/projects", newProject),
+         apiRequest("POST", "/api/projects", newProject),
       onSuccess: () => {
          queryClient.invalidateQueries({ queryKey: ["projects"] });
          toast({ title: "Project created successfully" });
@@ -41,8 +41,7 @@ export default function CreateProject() {
    };
 
    return (
-      <div className="max-w-2xl mx-auto p-8">
-         <h1 className="text-3xl font-bold mb-8">Create New Project</h1>
+      <div className="max-w-2xl mx-auto">
          <Card>
             <CardHeader>
                <CardTitle>Project Details</CardTitle>

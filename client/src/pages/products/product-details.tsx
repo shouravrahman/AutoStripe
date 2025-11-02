@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
 const CopyableField = ({ label, value }) => {
     const { toast } = useToast();
@@ -34,7 +33,7 @@ const CopyableField = ({ label, value }) => {
 }
 
 const ProductDetailsSkeleton = () => (
-    <div className="max-w-4xl mx-auto">
+    <div>
         <Skeleton className="h-8 w-1/4 mb-2" />
         <Skeleton className="h-5 w-1/2 mb-4" />
         <div className="flex gap-2 mb-8"><Skeleton className="h-9 w-32" /><Skeleton className="h-9 w-32" /></div>
@@ -45,33 +44,30 @@ const ProductDetailsSkeleton = () => (
 export default function ProductDetailsPage() {
     const { productId } = useParams();
 
-    const { data: product, isLoading, isError, error } = useQuery({
-        queryKey: ["/api/products", productId],
-        queryFn: async () => (await apiRequest.get(`/api/products/${productId}`)).data,
+    const { data: product, isLoading, isError, error } = useQuery<any>({
+        queryKey: ["product", productId],
+        queryFn: () => apiRequest("GET", `/api/products/${productId}`),
         enabled: !!productId,
     });
 
-    if (isError) return <div className="p-8">Error: {error.message}</div>;
+    if (isError) return <div className="p-8">Error: {(error as Error).message}</div>;
 
     return (
-        <DashboardLayout
-            title={isLoading ? "Loading..." : product?.name}
-            description={isLoading ? "" : product?.description}
-            breadcrumbs={[
-                { label: "Products", href: "/dashboard/products" },
-                { label: product?.name || "..." }
-            ]}
-            headerActions={
-                <div className="flex gap-2">
-                    {product?.stripeProductId && <Button variant="outline" size="sm" asChild><a href={`https://dashboard.stripe.com/products/${product.stripeProductId}`} target="_blank"><ExternalLink className="h-4 w-4 mr-2" />View in Stripe</a></Button>}
-                    {product?.lemonSqueezyProductId && <Button variant="outline" size="sm" asChild><a href={`https://app.lemonsqueezy.com/products/${product.lemonSqueezyProductId}`} target="_blank"><ExternalLink className="h-4 w-4 mr-2" />View in Lemon Squeezy</a></Button>}
-                </div>
-            }
-        >
+        <div>
             {isLoading ? <ProductDetailsSkeleton /> : !product ? (
                 <Card className="text-center p-12"><Info className="mx-auto h-12 w-12 text-muted-foreground/50"/><h3 className="mt-4 text-lg font-semibold">Product Not Found</h3><p className="mt-2 text-sm text-muted-foreground">This product could not be found.</p><Button asChild className="mt-6"><Link href="/dashboard/projects"><ArrowLeft className="h-4 w-4 mr-2"/>Back to Projects</Link></Button></Card>
             ) : (
                 <div className="max-w-4xl mx-auto">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight">{product.name}</h1>
+                            <p className="text-muted-foreground">{product.description}</p>
+                        </div>
+                        <div className="flex gap-2">
+                            {product?.stripeProductId && <Button variant="outline" size="sm" asChild><a href={`https://dashboard.stripe.com/products/${product.stripeProductId}`} target="_blank"><ExternalLink className="h-4 w-4 mr-2" />View in Stripe</a></Button>}
+                            {product?.lemonSqueezyProductId && <Button variant="outline" size="sm" asChild><a href={`https://app.lemonsqueezy.com/products/${product.lemonSqueezyProductId}`} target="_blank"><ExternalLink className="h-4 w-4 mr-2" />View in Lemon Squeezy</a></Button>}
+                        </div>
+                    </div>
                     <Tabs defaultValue="overview">
                         <TabsList className="grid w-full grid-cols-3"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="pricing">Pricing</TabsTrigger><TabsTrigger value="integration">Integration</TabsTrigger></TabsList>
                         <TabsContent value="overview" className="pt-6">
@@ -115,6 +111,6 @@ export default function ProductDetailsPage() {
                     </Tabs>
                 </div>
             )}
-        </DashboardLayout>
+        </div>
     );
 }

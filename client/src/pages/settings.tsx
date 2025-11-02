@@ -11,7 +11,6 @@ import { apiRequest } from "@/lib/apiRequest";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
 const ProfileSkeleton = () => (
     <Card>
@@ -29,9 +28,9 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const { data: user, isLoading: isUserLoading } = useQuery({ 
-      queryKey: ['/api/user'], 
-      queryFn: async () => (await apiRequest.get('/api/user')).data 
+  const { data: user, isLoading: isUserLoading } = useQuery<any>({
+    queryKey: ['user'],
+    queryFn: () => apiRequest('GET', '/api/user'),
   });
 
   const [profileData, setProfileData] = useState({ name: '', email: '' });
@@ -42,23 +41,23 @@ export default function SettingsPage() {
     }
   }, [user]);
 
-  const updateProfileMutation = useMutation({
-     mutationFn: (data) => apiRequest.patch("/api/user/profile", data),
+  const updateProfileMutation = useMutation<any, Error, { name: string; email: string }>({
+     mutationFn: (data) => apiRequest("PATCH", "/api/user/profile", data),
      onSuccess: () => {
        toast({ title: "Profile Updated", description: "Your changes have been saved." });
-       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+       queryClient.invalidateQueries({ queryKey: ['user'] });
      },
      onError: (error) => toast({ title: "Update Failed", description: error.message, variant: "destructive" })
   });
   
-  const deleteAccountMutation = useMutation({
-     mutationFn: () => apiRequest.delete("/api/user"),
+  const deleteAccountMutation = useMutation<void, Error, void>({
+     mutationFn: () => apiRequest("DELETE", "/api/user"),
      onSuccess: () => { window.location.href = '/'; },
      onError: (error) => toast({ title: "Deletion Failed", description: error.message, variant: "destructive" })
   });
 
-  const upgradeMutation = useMutation({
-      mutationFn: (plan) => apiRequest.post("/api/billing/create-checkout-session", { plan }),
+  const upgradeMutation = useMutation<any, Error, string>({
+      mutationFn: (plan) => apiRequest("POST", "/api/billing/create-checkout-session", { plan }),
       onSuccess: ({ url }) => {
          if (url) window.location.href = url;
          else toast({ title: "Could not retrieve upgrade link.", variant: "destructive" });
@@ -66,8 +65,8 @@ export default function SettingsPage() {
       onError: (error) => toast({ title: "Upgrade Failed", description: error.message, variant: "destructive" })
    });
 
-   const manageSubscriptionMutation = useMutation({
-        mutationFn: () => apiRequest.post("/api/billing/create-portal-session"),
+   const manageSubscriptionMutation = useMutation<any, Error, void>({
+        mutationFn: () => apiRequest("POST", "/api/billing/create-portal-session"),
         onSuccess: ({ url }) => { 
             if (url) window.location.href = url; 
             else toast({ title: "Could not retrieve portal link.", variant: "destructive" });
@@ -75,13 +74,13 @@ export default function SettingsPage() {
         onError: (error) => toast({ title: "Action Failed", description: error.message, variant: "destructive" })
    })
 
-  const handleProfileSubmit = (e) => {
+  const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateProfileMutation.mutate(profileData);
   };
 
   return (
-     <DashboardLayout title="Settings" description="Manage your account, billing, and notification settings.">
+     <div>
         <Tabs defaultValue="profile">
             <TabsList className="grid w-full grid-cols-3 mb-6">
                 <TabsTrigger value="profile">Profile</TabsTrigger>
@@ -152,6 +151,6 @@ export default function SettingsPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-    </DashboardLayout>
+    </div>
   );
 }

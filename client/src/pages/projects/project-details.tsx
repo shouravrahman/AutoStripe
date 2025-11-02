@@ -3,10 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/apiRequest";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Package, Plus, ArrowLeft } from "lucide-react";
+import { Package, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
 const ProjectDetailsSkeleton = () => (
     <div>
@@ -24,29 +23,21 @@ export default function ProjectDetailsPage() {
     const { projectId } = useParams();
 
     const { data: project, isLoading, isError, error } = useQuery({
-        queryKey: ["/api/projects", projectId],
-        queryFn: async () => (await apiRequest.get(`/api/projects/${projectId}`)).data,
+        queryKey: ["projects", projectId],
+        queryFn: () => apiRequest("GET", `/api/projects/${projectId}`),
         enabled: !!projectId,
     });
 
     const { data: products, isLoading: isLoadingProducts } = useQuery({
-        queryKey: ["/api/products", { projectId }],
-        queryFn: async () => (await apiRequest.get(`/api/products?projectId=${projectId}`)).data,
+        queryKey: ["products", { projectId }],
+        queryFn: () => apiRequest("GET", `/api/products?projectId=${projectId}`),
         enabled: !!projectId,
     });
 
     if (isError) return <div className="p-8">Error: {error.message}</div>;
 
     return (
-        <DashboardLayout 
-            title={isLoading ? "Loading..." : project?.name}
-            description={isLoading ? "" : (project?.description || 'No description provided.')}
-            breadcrumbs={[
-                { label: "Projects", href: "/dashboard/projects" },
-                { label: project?.name || "..." }
-            ]}
-            headerActions={<Button variant="outline" asChild><Link href={`/dashboard/projects/${projectId}/edit`}>Edit Project</Link></Button>}
-        >
+        <div>
             {isLoading ? <ProjectDetailsSkeleton /> : (
                 <div className="space-y-8">
                     <Card>
@@ -76,6 +67,6 @@ export default function ProjectDetailsPage() {
                     </Card>
                 </div>
             )}
-        </DashboardLayout>
+        </div>
     );
 }
