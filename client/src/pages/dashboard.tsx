@@ -1,14 +1,14 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { apiRequest } from "@/lib/apiRequest";
-import { DollarSign, FolderOpen, Key, LayoutDashboard, LogOut, Package, Plus, Zap } from "lucide-react";
-import Settings from "./settings";
+import { apiRequest } from "@/lib/apiRequest"; // Corrected import path
+import { DollarSign, FolderOpen, Key, LayoutDashboard, LogOut, Package, Plus, Settings } from "lucide-react";
+import { Logo } from "@/components/logo";
 import { useQuery } from "@tanstack/react-query";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Card } from "@/components/ui/card";
-import { Activity } from "react";
+import { Activity } from "lucide-react";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
@@ -20,11 +20,8 @@ const menuItems = [
 
 export default function Dashboard() {
    const { data: stats, isLoading, isError, error } = useQuery({
-    queryKey: ["/api/stats"],
-     queryFn: async () => {
-        const response = await apiRequest.get("/api/stats");
-        return response.data;
-     },
+      queryKey: ["stats"],
+      queryFn: () => apiRequest<any>("GET", "/api/stats"),
   });
 
    if (isError) {
@@ -45,8 +42,8 @@ export default function Dashboard() {
             <div className="p-6">
               <Link href="/">
                 <div className="flex items-center gap-2 cursor-pointer mb-8">
-                  <Zap className="h-6 w-6 text-primary" />
-                  <span className="text-xl font-bold">AutoBill</span>
+                          <Logo className="h-6 w-6 text-primary" />
+                          <span className="text-xl font-bold">StripeSyncer</span>
                 </div>
               </Link>
             </div>

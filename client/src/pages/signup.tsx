@@ -1,50 +1,46 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Zap } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { Github } from "lucide-react";
+import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/apiRequest";
 
 export default function Signup() {
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+   const { toast } = useToast();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     name: "",
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+   const signupMutation = useMutation({
+      mutationFn: (signupData: typeof formData) =>
+         apiRequest<any>("POST", "/api/auth/signup", signupData),
+      onSuccess: () => {
+         toast({
+            title: "Account created!",
+            description: "Welcome to StripeSyncer. Redirecting to dashboard...",
+         });
+         setTimeout(() => setLocation("/dashboard"), 1000);
+      },
+      onError: (error: any) => {
+         toast({
+            title: "Sign up failed",
+            description: error.message,
+            variant: "destructive",
+         });
+      },
+   });
 
-    try {
-      const response = await apiRequest("POST", "/api/auth/signup", formData);
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to sign up");
-      }
-
-      toast({
-        title: "Account created!",
-        description: "Welcome to AutoBill. Redirecting to dashboard...",
-      });
-
-      setTimeout(() => setLocation("/dashboard"), 1000);
-    } catch (error: any) {
-      toast({
-        title: "Sign up failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+   const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      signupMutation.mutate(formData);
   };
 
   return (
@@ -53,8 +49,8 @@ export default function Signup() {
         <div className="text-center mb-8">
           <Link href="/">
             <div className="inline-flex items-center gap-2 mb-4 cursor-pointer">
-              <Zap className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold">AutoBill</span>
+                    <Logo className="h-8 w-8 text-primary" />
+                    <span className="text-2xl font-bold">StripeSyncer</span>
             </div>
           </Link>
           <h1 className="text-3xl font-bold mb-2">Create your account</h1>
@@ -112,10 +108,19 @@ export default function Signup() {
             <Button
               type="submit"
               className="w-full hover-elevate active-elevate-2"
-              disabled={loading}
+                    disabled={signupMutation.isPending}
               data-testid="button-submit"
             >
-              {loading ? "Creating account..." : "Create account"}
+                    {signupMutation.isPending ? "Creating account..." : "Create account"}
+                 </Button>
+
+                 <div className="relative">
+                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">Or continue with</span></div>
+                 </div>
+
+                 <Button variant="outline" className="w-full hover-elevate active-elevate-2" asChild>
+                    <a href="/api/auth/github"><Github className="mr-2 h-4 w-4" /> GitHub</a>
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">

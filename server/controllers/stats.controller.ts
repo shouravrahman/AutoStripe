@@ -1,10 +1,12 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import { storage } from "../storage";
 
-export const getStats = async (req: Request, res: Response) => {
-  const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ message: "Not authenticated" });
-
-  const stats = await storage.getUserStats(userId);
-  res.json(stats);
+export const getStats = async (req: any, res: Response) => {
+	try {
+		const stats = await storage.getUserStats(req.user.id);
+		res.json(stats);
+	} catch (error: any) {
+		console.error("Failed to fetch stats:", error);
+		res.status(500).json({ message: "Internal server error" });
+	}
 };

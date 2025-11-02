@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { suggestDescription, suggestPricingTiers, getGeneratedCode } from "../controllers/ai.controller";
+import { getSuggestions, generateCode } from "../controllers/ai.controller";
 import { isAuthenticated } from "../middleware/isAuthenticated";
 
 const router = Router();
 
-router.post("/suggest-description", isAuthenticated, suggestDescription);
-router.post("/suggest-pricing-tiers", isAuthenticated, suggestPricingTiers);
-router.post("/generate-code", isAuthenticated, getGeneratedCode);
+router.use(isAuthenticated);
+router.post("/suggest", getSuggestions);
+router.post("/generate-code", generateCode);
 
 export default router;

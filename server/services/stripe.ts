@@ -1,80 +1,91 @@
 import Stripe from "stripe";
-import { decryptApiKey } from "../encryption";
 
-// Define the UserCredential type locally
-interface UserCredential {
-  encryptedApiKey: string;
+export interface ProductData {
+	name: string;
+	description?: string;
 }
 
-export class StripeService {
-  private getClient(credential: UserCredential): Stripe {
-    const apiKey = decryptApiKey(credential.encryptedApiKey);
-    return new Stripe(apiKey, { apiVersion: "2024-04-10" });
-  }
-
-  async createProduct(credential: UserCredential, name: string, description: string) {
-    const stripe = this.getClient(credential);
-    return await stripe.products.create({
-      name,
-      description,
-    });
-  }
-
-  async createPrice(
-    credential: UserCredential,
-    productId: string,
-    amount: number,
-    currency: string,
-    interval: "month" | "year" | null,
-    trialDays?: number
-  ) {
-    const stripe = this.getClient(credential);
-    
-    const priceData: Stripe.PriceCreateParams = {
-      product: productId,
-      unit_amount: amount,
-      currency,
-    };
-
-    if (interval) {
-      priceData.recurring = {
-        interval: interval as "month" | "year",
-        trial_period_days: trialDays || undefined,
-      };
-    }
-
-    return await stripe.prices.create(priceData);
-  }
-
-  async createCheckoutSession(credential: UserCredential, priceId: string, successUrl: string, cancelUrl: string) {
-    const stripe = this.getClient(credential);
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: "subscription",
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-    });
-    return session.url;
-  }
-
-  async createWebhook(credential: UserCredential, url: string, events: string[]) {
-    const stripe = this.getClient(credential);
-    return await stripe.webhookEndpoints.create({
-      url,
-      enabled_events: events as any[],
-    });
-  }
-
-  async getProduct(credential: UserCredential, productId: string) {
-    const stripe = this.getClient(credential);
-    return await stripe.products.retrieve(productId);
-  }
+export interface PriceData {
+	name: string;
+	amount: number;
+	currency: string;
+	interval: "month" | "year" | "once";
+	trialDays?: number;
 }
 
-export const stripeService = new StripeService();
+export const createStripeProduct = async (
+	apiKey: string,
+	productData: ProductData,
+	pricingPlans: PriceData[]
+) => {
+	const stripe = new Stripe(apiKey);
+
+	// 1. Create the Product in Stripe
+	const stripeProduct = await stripe.products.create({
+		name: productData.name,
+		description: productData.description,
+	});
+
+	// 2. Create a Price for each plan
+	const stripePrices = await Promise.all(
+		pricingPlans.map((plan) => {
+			const priceData: Stripe.PriceCreateParams = {
+				product: stripeProduct.id,
+				unit_amount: plan.amount,
+				currency: plan.currency,
+			};
+
+			if (plan.interval !== "once") {
+				priceData.recurring = { interval: plan.interval };
+				if (plan.trialDays && plan.trialDays > 0) {
+					priceData.recurring.trial_period_days = plan.trialDays;
+				}
+			}
+
+			return stripe.prices.create(priceData);
+		})
+	);
+
+	return { stripeProduct, stripePrices };
+};
+
+const STRIPE_WEBHOOK_EVENTS: Stripe.WebhookEndpointCreateParams.EnabledEvent[] =
+	[
+		"checkout.session.completed",
+		"invoice.payment_succeeded",
+		"invoice.payment_failed",
+		"customer.subscription.created",
+		"customer.subscription.updated",
+		"customer.subscription.deleted",
+	];
+
+export const createStripeWebhook = async (
+	apiKey: string,
+	webhookUrl: string
+) => {
+	const stripe = new Stripe(apiKey);
+
+	try {
+		const webhookEndpoint = await stripe.webhookEndpoints.create({
+			url: webhookUrl,
+			enabled_events: STRIPE_WEBHOOK_EVENTS,
+			api_version: "2024-06-20",
+		});
+		return webhookEndpoint;
+	} catch (error: any) {
+		// If the webhook endpoint already exists for this URL, Stripe throws an error.
+		// We can list existing webhooks and find the one with the matching URL.
+		if (error.code === "resource_already_exists") {
+			console.log("Webhook already exists, attempting to retrieve it.");
+			const webhooks = await stripe.webhookEndpoints.list();
+			const existingWebhook = webhooks.data.find(
+				(wh) => wh.url === webhookUrl
+			);
+			if (existingWebhook) {
+				return existingWebhook;
+			}
+		}
+		// Re-throw if it's a different error or if we couldn't find the existing webhook
+		throw error;
+	}
+};

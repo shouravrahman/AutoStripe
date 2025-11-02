@@ -5,8 +5,8 @@ export const isAuthenticated = (
   res: Response,
   next: NextFunction
 ) => {
-  if (req.session?.userId) {
-    next();
+  if (req.isAuthenticated()) {
+    return next();
   } else {
     res.status(401).json({ message: "Not authenticated" });
   }

@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export const PrivateRoute = (props) => {
   const { user, isLoading } = useAuth();
+   console.log("PrivateRoute user:", user);
 
   if (isLoading) {
     return <div>Loading...</div>; // Or a spinner component

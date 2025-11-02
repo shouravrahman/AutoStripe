@@ -17,6 +17,7 @@ export async function apiRequest<T>(
 		headers: {
 			"Content-Type": "application/json",
 		},
+		credentials: "include", // Crucial for sending cookies with cross-origin requests
 	};
 
 	if (body) {

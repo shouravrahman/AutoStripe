@@ -9,6 +9,7 @@ import scraperRoutes from "./scraper.routes";
 import statsRoutes from "./stats.routes";
 import adminRoutes from "./admin.routes";
 import billingRoutes from "./billing.routes";
+
 import webhookRoutes from "./webhook.routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {

@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/apiRequest";
 
 export default function CreateProject() {
   const [, setLocation] = useLocation();
@@ -23,14 +24,7 @@ export default function CreateProject() {
     setLoading(true);
 
     try {
-      const response = await apiRequest("POST", "/api/projects", formData);
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to create project");
-      }
-
-      const project = await response.json();
+      const project = await apiRequest<any>("POST", "/api/projects", formData);
 
       toast({
         title: "Project created!",

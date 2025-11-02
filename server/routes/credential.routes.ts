@@ -1,9 +1,5 @@
 import { Router } from "express";
-import {
-  createCredential,
-  getCredentials,
-  deleteCredential,
-} from "../controllers/credential.controller";
+import { createCredential, getCredentials, deleteCredential } from "../controllers/credential.controller";
 import { isAuthenticated } from "../middleware/isAuthenticated";
 
 const router = Router();

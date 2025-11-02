@@ -6,8 +6,8 @@ export const useAuth = () => {
     queryKey: ["user"],
     queryFn: async () => {
       try {
-        const response = await apiRequest.get("/api/user");
-        return response.data;
+        const response = await apiRequest<any>("GET", "/api/auth/user");
+        return response;
       } catch (error) {
         if (error.response?.status === 401) {
           // Not authenticated, return null

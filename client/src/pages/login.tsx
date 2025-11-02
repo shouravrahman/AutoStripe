@@ -1,49 +1,56 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Zap } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { Github } from "lucide-react";
+import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/apiRequest";
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+   const { toast } = useToast();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+   const loginMutation = useMutation({
+      mutationFn: (loginData: typeof formData) =>
+         apiRequest<any>("POST", "/api/auth/login", loginData),
+      onSuccess: async () => {
+         toast({
+            title: "Welcome back!",
+            description: "Redirecting...",
+         });
+         // Fetch user stats to determine if onboarding is needed
+         try {
+            const stats = await apiRequest<any>("GET", "/api/stats");
+            if (stats.totalProjects === 0) {
+               setTimeout(() => setLocation("/onboarding"), 1000);
+            } else {
+               setTimeout(() => setLocation("/dashboard"), 1000);
+            }
+         } catch (error) {
+            console.error("Failed to fetch user stats after login:", error);
+            setTimeout(() => setLocation("/dashboard"), 1000); // Fallback to dashboard
+         }
+      },
+      onError: (error: any) => {
+         toast({
+            title: "Login failed",
+            description: error.message,
+            variant: "destructive",
+         });
+      },
+   });
 
-    try {
-      const response = await apiRequest("POST", "/api/auth/login", formData);
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to log in");
-      }
-
-      toast({
-        title: "Welcome back!",
-        description: "Redirecting to your dashboard...",
-      });
-
-      setTimeout(() => setLocation("/dashboard"), 1000);
-    } catch (error: any) {
-      toast({
-        title: "Login failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+   const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      loginMutation.mutate(formData);
   };
 
   return (
@@ -52,8 +59,8 @@ export default function Login() {
         <div className="text-center mb-8">
           <Link href="/">
             <div className="inline-flex items-center gap-2 mb-4 cursor-pointer">
-              <Zap className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold">AutoBill</span>
+                    <Logo className="h-8 w-8 text-primary" />
+                    <span className="text-2xl font-bold">StripeSyncer</span>
             </div>
           </Link>
           <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
@@ -102,10 +109,19 @@ export default function Login() {
             <Button
               type="submit"
               className="w-full hover-elevate active-elevate-2"
-              disabled={loading}
+                    disabled={loginMutation.isPending}
               data-testid="button-submit"
             >
-              {loading ? "Logging in..." : "Log in"}
+                    {loginMutation.isPending ? "Logging in..." : "Log in"}
+                 </Button>
+
+                 <div className="relative">
+                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">Or continue with</span></div>
+                 </div>
+
+                 <Button variant="outline" className="w-full hover-elevate active-elevate-2" asChild>
+                    <a href="/api/auth/github"><Github className="mr-2 h-4 w-4" /> GitHub</a>
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">

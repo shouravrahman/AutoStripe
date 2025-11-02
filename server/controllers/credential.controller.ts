@@ -1,43 +1,63 @@
 import { Request, Response } from "express";
-import { storage } from "../storage";
+import Credential from "../models/credential.model";
+import { encryptApiKey } from "../encryption";
 
 export const createCredential = async (req: Request, res: Response) => {
   try {
-    const userId = req.session?.userId;
-    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+    const { provider, apiKey, label } = req.body;
+    // @ts-ignore
+    const userId = req.user.id;
 
-    const { provider, apiKey, publicKey, label } = req.body;
+    if (!provider || !apiKey || !label) {
+      return res.status(400).json({ message: "Provider, API key, and label are required" });
+    }
 
-    const credential = await storage.createCredential(userId, {
+    const encryptedApiKey = encryptApiKey(apiKey);
+
+    const credential = await Credential.create({
+      userId,
       provider,
-      encryptedApiKey: apiKey,
-      encryptedPublicKey: publicKey || null,
+      encryptedApiKey,
       label,
     });
 
-    res.json(credential);
+    res.status(201).json({
+      id: credential._id,
+      provider: credential.provider,
+      label: credential.label,
+      createdAt: credential.createdAt,
+    });
   } catch (error: any) {
-    res.status(400).json({ message: error.message });
+    res.status(500).json({ message: "Error creating credential", error: error.message });
   }
 };
 
 export const getCredentials = async (req: Request, res: Response) => {
-  const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ message: "Not authenticated" });
+  try {
+    // @ts-ignore
+    const userId = req.user.id;
+    const credentials = await Credential.find({ userId }).select("-encryptedApiKey -encryptedPublicKey");
 
-  const credentials = await storage.getUserCredentials(userId);
-  res.json(credentials);
+    res.json(credentials);
+  } catch (error: any) {
+    res.status(500).json({ message: "Error fetching credentials", error: error.message });
+  }
 };
 
 export const deleteCredential = async (req: Request, res: Response) => {
-  const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ message: "Not authenticated" });
+  try {
+    const { id } = req.params;
+    // @ts-ignore
+    const userId = req.user.id;
 
-  const credential = await storage.getCredentialById(req.params.id);
-  if (!credential || credential.userId !== userId) {
-    return res.status(404).json({ message: "Credential not found" });
+    const credential = await Credential.findOneAndDelete({ _id: id, userId });
+
+    if (!credential) {
+      return res.status(404).json({ message: "Credential not found" });
+    }
+
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(500).json({ message: "Error deleting credential", error: error.message });
   }
-
-  await storage.deleteCredential(req.params.id);
-  res.json({ success: true });
 };

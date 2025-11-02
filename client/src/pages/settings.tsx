@@ -8,13 +8,16 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/apiRequest";
 
 export default function Settings() {
   const { toast } = useToast();
    const queryClient = useQueryClient();
 
-   const { data: user } = useQuery({ queryKey: ["/api/user"] });
+   const { data: user } = useQuery({
+      queryKey: ["user"],
+      queryFn: () => apiRequest<any>("GET", "/api/user"),
+   });
 
   const [profileData, setProfileData] = useState({
     name: user?.name || "",
@@ -22,10 +25,10 @@ export default function Settings() {
   });
 
   const updateProfileMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("PATCH", "/api/user/profile", data),
+     mutationFn: (data: any) => apiRequest<any>("PATCH", "/api/user/profile", data),
     onSuccess: () => {
        toast({ title: "Profile updated successfully" });
-       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+       queryClient.invalidateQueries({ queryKey: ["user"] });
     },
   });
 
@@ -35,8 +38,13 @@ export default function Settings() {
   };
 
    const upgradeMutation = useMutation({
-      mutationFn: (plan: string) => apiRequest("POST", "/api/billing/upgrade", { plan }),
+      mutationFn: (plan: string) =>
+         apiRequest<{ upgradeUrl: string }>("POST", "/api/billing/upgrade", { plan }),
       onSuccess: (data) => {
+         if (!data.upgradeUrl) {
+            toast({ title: "Could not get upgrade URL", variant: "destructive" });
+            return;
+         }
          window.location.href = data.upgradeUrl;
       },
    });

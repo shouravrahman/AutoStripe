@@ -1,12 +1,10 @@
 import { Router } from "express";
-import { handleWebhook, getWebhooks } from "../controllers/webhook.controller";
+import { getStoresForApiKey } from "../controllers/lemonsqueezy.controller";
 import { isAuthenticated } from "../middleware/isAuthenticated";
 
 const router = Router();
 
 router.use(isAuthenticated);
-
-router.get("/", getWebhooks);
-router.post("/handler", handleWebhook);
+router.post("/stores", getStoresForApiKey);
 
 export default router;

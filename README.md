@@ -1,6 +1,6 @@
-# AutoBillAI
+## PayFlow
 
-AutoBillAI is a tool for developers to automate the setup of products, pricing plans, and webhooks in their Stripe and LemonSqueezy accounts.
+StripeSyncer is a tool for developers to automate the setup of products, pricing plans, and webhooks in their Stripe and LemonSqueezy accounts.
 
 ## Features
 
@@ -23,8 +23,8 @@ AutoBillAI is a tool for developers to automate the setup of products, pricing p
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/autobillai.git
-   cd autobillai
+   git clone https://github.com/your-username/stripesyncer.git
+   cd stripesyncer
    ```
 
 2. Install dependencies:
@@ -37,9 +37,8 @@ AutoBillAI is a tool for developers to automate the setup of products, pricing p
    MONGODB_URI=
    SESSION_SECRET=
    ENCRYPTION_KEY=
-   OPENAI_API_KEY=
-   LEMONSQUEEZY_API_KEY=
-   STRIPE_API_KEY=
+   GOOGLE_API_KEY=
+
    BASE_URL=http://localhost:3000
    ```
 
@@ -53,3 +52,43 @@ AutoBillAI is a tool for developers to automate the setup of products, pricing p
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Deployment
+
+PayFlow can be deployed to various cloud providers. The recommended approach for a seamless deployment of both frontend and backend is using Render.
+
+### Deploying to Render
+
+Render allows you to deploy both your frontend (as a Static Site) and backend (as a Web Service) from a single Git repository.
+
+#### Prerequisites
+
+*   Your application code pushed to a Git repository (e.g., GitHub, GitLab).
+*   A Render account.
+
+#### Frontend Deployment (Static Site)
+
+1.  **Create a New Static Site:** In your Render dashboard, click "New" and select "Static Site".
+2.  **Connect Repository:** Connect your Git provider and select the repository containing PayFlow.
+3.  **Configuration:**
+    *   **Name:** Choose a unique name for your frontend service.
+    *   **Branch:** Specify the branch to deploy from (e.g., `main`).
+    *   **Root Directory:** `client`
+    *   **Build Command:** `npm install && npm run build`
+    *   **Publish Directory:** `dist`
+4.  **Create Static Site:** Click "Create Static Site".
+
+#### Backend Deployment (Web Service)
+
+1.  **Create a New Web Service:** In your Render dashboard, click "New" and select "Web Service".
+2.  **Connect Repository:** Connect your Git provider and select the repository containing PayFlow.
+3.  **Configuration:**
+    *   **Name:** Choose a unique name for your backend service.
+    *   **Branch:** Specify the branch to deploy from (e.g., `main`).
+    *   **Root Directory:** (Leave blank or specify the root of your repository if `package.json` is there)
+    *   **Build Command:** `npm install && npm run build:server`
+    *   **Start Command:** `npm start`
+    *   **Environment Variables:** Add all necessary environment variables (e.g., `MONGODB_URI`, `SESSION_SECRET`, `ENCRYPTION_KEY`, `GOOGLE_API_KEY`, `STRIPE_API_KEY`, `LEMONSQUEEZY_API_KEY`, `LEMONSQUEEZY_STORE_ID`, `BASE_URL`) in the "Environment" section of your Render service settings. Ensure `BASE_URL` points to your deployed frontend URL.
+4.  **Create Web Service:** Click "Create Web Service".
+
+Render will automatically build and deploy your application. Subsequent pushes to your connected Git branch will trigger new deployments.

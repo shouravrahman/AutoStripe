@@ -6,9 +6,11 @@
    "main": "index.js",
    "scripts": {
       "test": "echo \"Error: no test specified\" && exit 1",
-      "dev": "concurrently \"npm run dev:server\" \"npm run dev --workspace=client\"",
-      "dev:server": "tsx watch server/index.ts",
+      "dev:all": "concurrently \"npm run dev:server\" \"npm run dev --workspace=client\"",
+      "dev": "npm run dev --workspace=client",
+      "dev:server": "nodemon --exec tsx -r dotenv/config server/index.ts",
       "build:server": "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=server/dist",
+      "start": "node server/dist/index.js",
       "check:server": "node_modules/typescript/bin/tsc --project server/tsconfig.json"
    },
    "keywords": [],
@@ -22,7 +24,10 @@
    "dependencies": {
       "@google/generative-ai": "^0.24.1",
       "@lemonsqueezy/lemonsqueezy.js": "^4.0.0",
+      "@types/passport-github2": "^1.2.9",
+      "axios": "^1.13.1",
       "cheerio": "^1.1.2",
+      "connect-mongo": "^5.1.0",
       "dotenv": "^17.2.3",
       "drizzle-zod": "^0.8.3",
       "express": "^5.1.0",
@@ -32,6 +37,7 @@
       "memorystore": "^1.6.7",
       "mongoose": "^8.4.1",
       "passport": "^0.7.0",
+      "passport-github2": "^0.1.12",
       "passport-local": "^1.0.0",
       "stripe": "^19.1.0",
       "ws": "^8.18.3",
@@ -55,6 +61,7 @@
       "@types/ws": "^8.18.1",
       "concurrently": "^9.2.1",
       "esbuild": "^0.25.11",
+      "nodemon": "^3.1.10",
       "tsx": "^4.20.6",
       "typescript": "5.9.3",
       "vite-tsconfig-paths": "^5.1.4"

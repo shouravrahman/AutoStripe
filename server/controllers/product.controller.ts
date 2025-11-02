@@ -1,264 +1,213 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import { storage } from "../storage";
-import { stripeService } from "../services/stripe";
-import { lemonSqueezyService } from "services/lemonsqueezy";
+import { createStripeProduct, createStripeWebhook } from "../services/stripe";
+import {
+	createLemonSqueezyProduct,
+	createLemonSqueezyWebhook,
+} from "../services/lemonsqueezy";
+import crypto from "crypto";
+import { decryptApiKey } from "../encryption";
 import { codeGenerationService } from "../services/code-generation";
 
-export const getProducts = async (req: Request, res: Response) => {
-	const userId = req.session?.userId;
-	if (!userId) return res.status(401).json({ message: "Not authenticated" });
-
-	const products = await storage.getUserProducts(userId);
-	res.json(products);
-};
-
-export const getProductById = async (req: Request, res: Response) => {
-	const userId = req.session?.userId;
-	if (!userId) return res.status(401).json({ message: "Not authenticated" });
-
-	const product = await storage.getProductById(req.params.id);
-	if (!product || product.userId !== userId) {
-		return res.status(404).json({ message: "Product not found" });
-	}
-
-	const pricingPlans = await storage.getProductPricingPlans(product.id);
-	const webhooks = await storage.getProductWebhooks(product.id);
-	const configs = await storage.getProductConfigs(product.id);
-
-	res.json({ ...product, pricingPlans, webhooks, configs });
-};
-
-export const generateProduct = async (req: Request, res: Response) => {
+// GET /api/products - Fetch all products for the logged-in user, optionally filtered by project
+export const getProducts = async (req: any, res: Response) => {
+	const { projectId } = req.query;
 	try {
-		const userId = req.session?.userId;
-		if (!userId)
-			return res.status(401).json({ message: "Not authenticated" });
-
-		const { projectId, product, pricingPlans, integrationSettings } =
-			req.body;
-
-		// Verify project ownership
-		const project = await storage.getProjectById(projectId);
-		if (!project || project.userId !== userId) {
-			return res.status(404).json({ message: "Project not found" });
+		let products;
+		if (projectId) {
+			products = await storage.getProjectProducts(projectId);
+		} else {
+			products = await storage.getUserProducts(req.user.id);
 		}
+		res.json(products);
+	} catch (error) {
+		console.error("Failed to fetch products:", error);
+		res.status(500).json({ message: "Internal server error" });
+	}
+};
 
-		// Check subscription status and product limits
-		const user = await storage.getUser(userId);
-		const userProducts = await storage.getUserProducts(userId);
+export const generateProduct = async (req: any, res: Response) => {
+	const {
+		projectId,
+		product: productData,
+		pricingPlans,
+		integrationSettings,
+		frontendStack,
+		backendStack,
+		generationTarget,
+	} = req.body;
 
-		if (user?.subscriptionStatus === "free" && userProducts.length >= 3) {
-			return res.status(403).json({
-				message:
-					"Free plan limit reached. Upgrade to Pro for unlimited products.",
-			});
-		}
-
-		// Create product record
-		const createdProduct = await storage.createProduct(userId, projectId, {
-			name: product.name,
-			description: product.description,
+	try {
+		// --- Create the base product in our DB ---
+		const newProduct = await storage.createProduct(req.user.id, projectId, {
+			name: productData.name,
+			description: productData.description,
+			features: productData.features,
 		});
 
-		// Get user credentials
-		const credentials = await storage.getUserCredentials(userId);
-		const stripeCredential = credentials.find(
-			(c) => c.provider === "stripe" && c.isActive
-		);
-		const lemonCredential = credentials.find(
-			(c) => c.provider === "lemonsqueezy" && c.isActive
-		);
+		let stripeProductId: string | undefined;
+		const stripePriceIds: { [key: number]: string } = {};
+		let lemonSqueezyProductId: string | undefined;
+		const lemonSqueezyVariantIds: { [key: number]: string } = {};
+		let stripeWebhookSecret: string | undefined;
+		let lemonSqueezyStoreUrl: string | undefined;
 
-		// Generate in Stripe (using USER'S API keys)
-		if (integrationSettings.createInStripe && stripeCredential) {
-			const stripeProduct = await stripeService.createProduct(
-				stripeCredential,
-				product.name,
-				product.description
+		// --- Create in Stripe if enabled ---
+		if (integrationSettings.createInStripe) {
+			if (!integrationSettings.webhookUrl) {
+				throw new Error(
+					"Webhook URL is required for Stripe integration."
+				);
+			}
+
+			const credentials = await storage.getUserCredentials(req.user.id);
+			const stripeCredential = credentials.find(
+				(c) => c.provider === "stripe"
 			);
 
-			await storage.updateProduct(createdProduct.id, {
-				stripeProductId: stripeProduct.id,
-				stripeCredentialId: stripeCredential.id,
+			if (!stripeCredential) {
+				throw new Error(
+					"Stripe credentials not found. Please add them on the Credentials page."
+				);
+			}
+
+			const decryptedApiKey = decryptApiKey(
+				stripeCredential.encryptedApiKey
+			);
+
+			const { stripeProduct, stripePrices } = await createStripeProduct(
+				decryptedApiKey,
+				productData,
+				pricingPlans
+			);
+
+			stripeProductId = stripeProduct.id;
+			stripePrices.forEach((p, index) => {
+				stripePriceIds[index] = p.id;
 			});
 
-			// Create pricing plans in Stripe
-			for (const plan of pricingPlans) {
-				const stripePrice = await stripeService.createPrice(
-					stripeCredential,
-					stripeProduct.id,
-					plan.amount,
-					plan.currency,
-					(plan.interval === "once" ? null : plan.interval) as
-						| "month"
-						| "year"
-						| null,
-					plan.trialDays
-				);
-
-				const checkoutUrl = await stripeService.createCheckoutSession(
-					stripeCredential,
-					stripePrice.id,
-					`${process.env.BASE_URL}/success`,
-					`${process.env.BASE_URL}/cancel`
-				);
-
-				await storage.createPricingPlan(createdProduct.id, {
-					...plan,
-					stripePriceId: stripePrice.id,
-					checkoutUrl,
-				});
-			}
-
-			// Setup webhook if requested
-			if (integrationSettings.setupWebhooks) {
-				const webhookUrl = `${
-					process.env.BASE_URL || "https://autobill.app"
-				}/api/webhooks/stripe`;
-				const webhook = await stripeService.createWebhook(
-					stripeCredential,
-					webhookUrl,
-					[
-						"payment_intent.succeeded",
-						"customer.subscription.created",
-					]
-				);
-
-				await storage.createWebhook({
-					productId: createdProduct.id,
-					provider: "stripe",
-					webhookId: webhook.id,
-					url: webhookUrl,
-					secret: webhook.secret,
-					events: [
-						"payment_intent.succeeded",
-						"customer.subscription.created",
-					],
-					status: "active",
-				});
-			}
+			// Automatically create webhook
+			const stripeWebhook = await createStripeWebhook(
+				decryptedApiKey,
+				integrationSettings.webhookUrl
+			);
+			await storage.createWebhook({
+				userId: req.user.id,
+				provider: "stripe",
+				webhookId: stripeWebhook.id,
+				secret: stripeWebhook.secret, // Secret is returned on creation
+				stripeWebhookSecret: stripeWebhook.secret,
+				url: integrationSettings.webhookUrl,
+			});
 		}
 
-		// Generate in LemonSqueezy (using USER\'S API keys)
-		if (integrationSettings.createInLemonSqueezy && lemonCredential) {
-			const stores = await lemonSqueezyService.getStores(lemonCredential);
-			const storeId = stores.data[0]?.id;
+		// --- Create in LemonSqueezy if enabled ---
+		if (integrationSettings.createInLemonSqueezy) {
+			if (!integrationSettings.webhookUrl) {
+				throw new Error(
+					"Webhook URL is required for LemonSqueezy integration."
+				);
+			}
+			const credentials = await storage.getUserCredentials(req.user.id);
+			const lemonCredential = credentials.find(
+				(c) => c.provider === "lemonsqueezy"
+			);
 
-			if (storeId) {
-				const lsProduct = await lemonSqueezyService.createProduct(
-					lemonCredential,
-					storeId,
-					product.name,
-					product.description
+			if (!lemonCredential) {
+				throw new Error(
+					"LemonSqueezy credentials not found. Please add them on the Credentials page."
+				);
+			}
+
+			const decryptedApiKey = decryptApiKey(
+				lemonCredential.encryptedApiKey
+			);
+			// Construct the store URL from the store ID
+			lemonSqueezyStoreUrl = `https://app.lemonsqueezy.com/my-stores/${lemonCredential.storeId}`;
+
+			const { lemonProduct, lemonVariants } =
+				await createLemonSqueezyProduct(
+					decryptedApiKey,
+					lemonCredential.storeId,
+					productData,
+					pricingPlans
 				);
 
-				await storage.updateProduct(createdProduct.id, {
-					lemonSqueezyProductId: lsProduct.data.id,
-					lemonSqueezyStoreId: storeId,
-					lemonSqueezyCredentialId: lemonCredential.id,
-				});
+			lemonSqueezyProductId = lemonProduct.id;
+			lemonVariants.forEach((v, index) => {
+				lemonSqueezyVariantIds[index] = v.id;
+			});
 
-				// Create variants in LemonSqueezy
-				for (const plan of pricingPlans) {
-					const variant = await lemonSqueezyService.createVariant(
-						lemonCredential,
-						lsProduct.data.id,
-						plan.name,
-						plan.amount,
-						plan.interval === "once" ? null : plan.interval,
-						plan.trialDays
-					);
+			// Automatically create webhook
+			const lemonWebhookSecret = crypto.randomBytes(16).toString("hex");
+			const lemonWebhook = await createLemonSqueezyWebhook(
+				decryptedApiKey,
+				lemonCredential.storeId,
+				integrationSettings.webhookUrl,
+				lemonWebhookSecret
+			);
 
-					const checkoutUrl =
-						await lemonSqueezyService.getCheckoutUrl(
-							lemonCredential,
-							variant.data.id
-						);
-
-					await storage.createPricingPlan(createdProduct.id, {
-						...plan,
-						lemonSqueezyVariantId: variant.data.id,
-						checkoutUrl,
-					});
-				}
-
-				// Setup webhook if requested
-				if (integrationSettings.setupWebhooks) {
-					const webhookUrl = `${
-						process.env.BASE_URL || "https://autobill.app"
-					}/api/webhooks/lemonsqueezy`;
-					const events = [
-						"order_created",
-						"subscription_payment_success",
-					];
-					const webhook = await lemonSqueezyService.createWebhook(
-						lemonCredential,
-						storeId,
-						webhookUrl,
-						events
-					);
-
-					await storage.createWebhook({
-						productId: createdProduct.id,
-						provider: "lemonsqueezy",
-						webhookId: webhook.data.id,
-						url: webhookUrl,
-						secret: webhook.data.attributes.signing_secret,
-						events: events,
-						status: "active",
-					});
-				}
+			if (!lemonWebhook.data) {
+				throw new Error("Failed to create LemonSqueezy webhook.");
 			}
+
+			await storage.createWebhook({
+				userId: req.user.id,
+				provider: "lemonsqueezy",
+				webhookId: lemonWebhook.data.data.id,
+				secret: lemonWebhookSecret,
+				url: integrationSettings.webhookUrl,
+			});
 		}
 
-		// Update product status
-		await storage.updateProduct(createdProduct.id, {
-			status: "generated",
+		// --- Create pricing plans in our DB ---
+		for (let i = 0; i < pricingPlans.length; i++) {
+			const plan = pricingPlans[i];
+			await storage.createPricingPlan(newProduct.id, {
+				...plan,
+				stripePriceId: stripePriceIds[i],
+				lemonSqueezyVariantId: lemonSqueezyVariantIds[i],
+			});
+		}
+
+		// --- Update our product with the new platform ID ---
+		const updatedProduct = await storage.updateProduct(newProduct.id, {
+			stripeProductId,
+			lemonSqueezyProductId,
 		});
 
-		// Generate config files
-		const generatedPricingPlans = await storage.getProductPricingPlans(
-			createdProduct.id
+		// --- Generate and Save Code Snippets ---
+		const finalProduct = await storage.getProductById(newProduct.id);
+		if (!finalProduct) {
+			throw new Error("Failed to retrieve final product after creation.");
+		}
+
+		const nextJsComponent = codeGenerationService.generateNextJsComponent(
+			finalProduct,
+			lemonSqueezyStoreUrl || ""
 		);
+		const nodeWebhookHandler = codeGenerationService.generateNodeWebhook(
+			finalProduct,
+			stripeWebhookSecret || ""
+		);
+		const jsonConfig =
+			codeGenerationService.generateJsonConfig(finalProduct);
 
 		await storage.createGeneratedConfig({
-			productId: createdProduct.id,
-			configType: "json",
-			content: JSON.stringify(
-				{
-					product: createdProduct,
-					pricingPlans: generatedPricingPlans,
-				},
-				null,
-				2
-			),
+			productId: finalProduct.id,
+			nextjs_component: nextJsComponent,
+			node_webhook_handler: nodeWebhookHandler,
+			json_config: jsonConfig,
 		});
 
-		for (const plan of generatedPricingPlans) {
-			if (plan.checkoutUrl) {
-				const htmlSnippet = codeGenerationService.generateHtmlSnippet(
-					plan.checkoutUrl
-				);
-				await storage.createGeneratedConfig({
-					productId: createdProduct.id,
-					configType: "html_snippet",
-					content: htmlSnippet,
-				});
-
-				const reactSnippet = codeGenerationService.generateReactSnippet(
-					plan.checkoutUrl
-				);
-				await storage.createGeneratedConfig({
-					productId: createdProduct.id,
-					configType: "react_snippet",
-					content: reactSnippet,
-				});
-			}
-		}
-
-		res.json({ productId: createdProduct.id, success: true });
+		res.status(201).json({
+			product: finalProduct,
+			generatedCode: { nextJsComponent, nodeWebhookHandler, jsonConfig },
+		});
 	} catch (error: any) {
-		console.error("Product generation error:", error);
-		res.status(500).json({ message: error.message });
+		console.error("Product generation failed:", error);
+		res.status(500).json({
+			message: error.message || "Internal server error",
+		});
 	}
 };

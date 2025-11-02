@@ -1,92 +1,113 @@
-import { decryptApiKey } from "../encryption";
 import {
-  lemonSqueezySetup,
-  createCheckout,
-  createProduct as createLsProduct,
-  createVariant as createLsVariant,
-  createWebhook as createLsWebhook,
-  getStores as getLsStores,
-  type LemonSqueezyOptions,
+	lemonSqueezySetup,
+	createWebhook,
 } from "@lemonsqueezy/lemonsqueezy.js";
+import type { PriceData, ProductData } from "./stripe";
+import crypto from "crypto";
+import axios from "axios";
 
-// Define the UserCredential type locally
-interface UserCredential {
-  encryptedApiKey: string;
-}
+export const createLemonSqueezyProduct = async (
+	apiKey: string,
+	storeId: string,
+	productData: ProductData,
+	pricingPlans: PriceData[]
+) => {
+	const API_BASE_URL = "https://api.lemonsqueezy.com/v1";
 
-class LemonSqueezyService {
-  private setup(credential: UserCredential) {
-    const apiKey = decryptApiKey(credential.encryptedApiKey);
-    const options: LemonSqueezyOptions = {
-      apiKey,
-      onError: (error) => {
-        console.error("LemonSqueezy API Error:", error);
-        throw new Error(`LemonSqueezy API error: ${error.message}`);
-      },
-    };
-    lemonSqueezySetup(options);
-  }
+	const headers = {
+		Accept: "application/vnd.api+json",
+		"Content-Type": "application/vnd.api+json",
+		Authorization: `Bearer ${apiKey}`,
+	};
 
-  async getStores(credential: UserCredential) {
-    this.setup(credential);
-    return await getLsStores();
-  }
+	// 1. Create the Product directly via API
+	const productPayload = {
+		data: {
+			type: "products",
+			attributes: {
+				name: productData.name,
+				description: productData.description,
+				redirect_url: process.env.BASE_URL || "https://example.com",
+			},
+			relationships: {
+				store: {
+					data: {
+						type: "stores",
+						id: storeId,
+					},
+				},
+			},
+		},
+	};
 
-  async createProduct(
-    credential: UserCredential,
-    storeId: number,
-    name: string,
-    description: string
-  ) {
-    this.setup(credential);
-    return await createLsProduct({
-      name,
-      description,
-      storeId,
-    });
-  }
+	const productResponse = await axios.post(
+		`${API_BASE_URL}/products`,
+		productPayload,
+		{ headers }
+	);
+	const lemonProduct = productResponse.data.data;
 
-  async createVariant(
-    credential: UserCredential,
-    productId: number,
-    name: string,
-    price: number,
-    interval: "month" | "year" | null,
-    trialDays?: number
-  ) {
-    this.setup(credential);
-    return await createLsVariant({
-      name,
-      price,
-      productId,
-      interval: interval ?? "day",
-      intervalCount: 1,
-      trialInterval: trialDays ? "day" : undefined,
-      trialIntervalCount: trialDays || undefined,
-    });
-  }
+	// 2. Create Variants for the Product directly via API
+	const variantPromises = pricingPlans.map(async (plan) => {
+		const isSubscription = plan.interval !== "once";
+		const variantPayload = {
+			data: {
+				type: "variants",
+				attributes: {
+					name: plan.name,
+					price: plan.amount,
+					is_subscription: isSubscription,
+					interval: isSubscription ? plan.interval : null,
+					interval_count: isSubscription ? 1 : null,
+				},
+				relationships: {
+					product: {
+						data: {
+							type: "products",
+							id: lemonProduct.id,
+						},
+					},
+				},
+			},
+		};
+		const response = await axios.post(
+			`${API_BASE_URL}/variants`,
+			variantPayload,
+			{
+				headers,
+			}
+		);
+		return response.data.data;
+	});
 
-  async getCheckoutUrl(credential: UserCredential, variantId: number) {
-    this.setup(credential);
-    const checkout = await createCheckout({
-      variantId,
-    });
-    return checkout.data?.attributes.url;
-  }
+	const lemonVariants = await Promise.all(variantPromises);
 
-  async createWebhook(
-    credential: UserCredential,
-    storeId: number,
-    url: string,
-    events: string[]
-  ) {
-    this.setup(credential);
-    return await createLsWebhook({
-      storeId,
-      url,
-      events,
-    });
-  }
-}
+	return { lemonProduct, lemonVariants };
+};
 
-export const lemonSqueezyService = new LemonSqueezyService();
+export const createLemonSqueezyWebhook = async (
+	apiKey: string,
+	storeId: string,
+	webhookUrl: string,
+	secret: string
+) => {
+	lemonSqueezySetup({ apiKey });
+
+	const webhook = await createWebhook(storeId, {
+		url: webhookUrl,
+		secret,
+		events: [
+			"order_created",
+			"order_refunded",
+			"subscription_created",
+			"subscription_updated",
+			"subscription_cancelled",
+			"subscription_resumed",
+			"subscription_expired",
+			"subscription_payment_success",
+			"subscription_payment_failed",
+		],
+	});
+
+	return webhook;
+};

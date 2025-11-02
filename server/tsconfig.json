@@ -5,7 +5,8 @@
 		"paths": {
 			"@shared/*": ["../shared/*"]
 		},
-		"outDir": "dist"
+		"outDir": "dist",
+		"typeRoots": ["./types", "./node_modules/@types"]
 	},
 	"include": ["**/*.ts"],
 	"exclude": ["node_modules", "dist"]

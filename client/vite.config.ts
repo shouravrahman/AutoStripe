@@ -10,9 +10,17 @@ export default defineConfig({
 		outDir: "../dist/public",
 		emptyOutDir: true,
 	},
-	server: {
-		fs: {
-			strict: false,
-		},
-	},
-});
+	  server: {
+	    fs: {
+	      strict: false,
+	    },
+	    proxy: {
+	      "/api": {
+	        target: "http://localhost:5000", // Your backend server
+	        changeOrigin: true,
+	        secure: false,
+	        ws: true,
+	      },
+	    },
+	  },
+	});

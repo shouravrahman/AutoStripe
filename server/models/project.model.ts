@@ -22,7 +22,7 @@ const projectSchema = new Schema(
 			default: "active",
 		},
 	},
-	{ timestamps: true }
+	{ timestamps: true, toJSON: { virtuals: true } }
 );
 
 const Project = models.Project || model("Project", projectSchema);

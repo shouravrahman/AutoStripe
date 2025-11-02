@@ -1,19 +1,19 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Key, CheckCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/apiRequest";
+import { useMutation } from "@tanstack/react-query";
 
 export default function Onboarding() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  
+   const [step, setStep] = useState(1);
+
   const [stripeData, setStripeData] = useState({
     publicKey: "",
     secretKey: "",
@@ -25,65 +25,46 @@ export default function Onboarding() {
     label: "My LemonSqueezy Account",
   });
 
-  const handleStripeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const response = await apiRequest("POST", "/api/credentials", {
-        provider: "stripe",
-        apiKey: stripeData.secretKey,
-        publicKey: stripeData.publicKey,
-        label: stripeData.label,
-      });
-
-      if (!response.ok) throw new Error("Failed to save Stripe credentials");
-
+   const createCredentialMutation = useMutation({
+      mutationFn: (data: any) => apiRequest("POST", "/api/credentials", data),
+      onSuccess: (data, variables) => {
       toast({
-        title: "Stripe connected!",
-        description: "Your Stripe account is now linked.",
+         title: `${variables.provider} connected!`,
+         description: `Your ${variables.provider} account is now linked.`,
       });
-
-      setStep(2);
-    } catch (error: any) {
+       if (variables.provider === 'stripe') {
+          setStep(2);
+        } else {
+           setTimeout(() => setLocation("/dashboard"), 1500);
+        }
+     },
+     onError: (error: any) => {
       toast({
         title: "Connection failed",
         description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
-    }
+     },
+  });
+
+   const handleStripeSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      createCredentialMutation.mutate({
+         provider: "stripe",
+         apiKey: stripeData.secretKey,
+         publicKey: stripeData.publicKey,
+         label: stripeData.label,
+      });
   };
 
   const handleLemonSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
-    try {
-      const response = await apiRequest("POST", "/api/credentials", {
+     createCredentialMutation.mutate({
         provider: "lemonsqueezy",
         apiKey: lemonData.apiKey,
         label: lemonData.label,
-      });
-
-      if (!response.ok) throw new Error("Failed to save LemonSqueezy credentials");
-
-      toast({
-        title: "LemonSqueezy connected!",
-        description: "All set! Redirecting to dashboard...",
-      });
-
-      setTimeout(() => setLocation("/dashboard"), 1500);
-    } catch (error: any) {
-      toast({
-        title: "Connection failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+       // storeId will be added here once that flow is complete
+    });
   };
 
   return (
@@ -178,10 +159,10 @@ export default function Onboarding() {
                 <Button
                   type="submit"
                   className="flex-1 hover-elevate active-elevate-2"
-                  disabled={loading}
+                          disabled={createCredentialMutation.isPending}
                   data-testid="button-connect-stripe"
                 >
-                  {loading ? "Connecting..." : "Connect Stripe"}
+                          {createCredentialMutation.isPending ? "Connecting..." : "Connect Stripe"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 <Button
@@ -260,16 +241,16 @@ export default function Onboarding() {
                 <Button
                   type="submit"
                   className="flex-1 hover-elevate active-elevate-2"
-                  disabled={loading}
+                          disabled={createCredentialMutation.isPending}
                   data-testid="button-connect-lemon"
                 >
-                  {loading ? "Connecting..." : "Connect & Continue"}
+                          {createCredentialMutation.isPending ? "Connecting..." : "Connect & Continue"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setLocation("/dashboard")}
+                          onClick={() => setLocation("/dashboard")} // Changed to use wouter's setLocation
                   className="hover-elevate active-elevate-2"
                 >
                   Skip

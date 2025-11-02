@@ -20,6 +20,9 @@ const credentialSchema = new Schema(
 		encryptedPublicKey: {
 			type: String,
 		},
+		storeId: {
+			type: String, // For LemonSqueezy store ID
+		},
 		label: {
 			type: String,
 		},

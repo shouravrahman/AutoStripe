@@ -5,8 +5,12 @@ import { useMutation } from "@tanstack/react-query";
 export default function Upgrade() {
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest.post("/api/billing/upgrade", { plan: "pro" });
-      return response.data;
+        const data = await apiRequest<{ upgradeUrl: string }>(
+           "POST",
+           "/api/billing/upgrade",
+           { plan: "pro" }
+        );
+        return data;
     },
     onSuccess: (data) => {
       window.location.href = data.upgradeUrl;
