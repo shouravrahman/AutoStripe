@@ -7,6 +7,7 @@ import Product from "./models/product.model";
 import PricingPlan from "./models/pricing-plan.model";
 import Webhook from "./models/webhook.model";
 import GeneratedConfig from "./models/generated-config.model";
+import CodeGeneration from "./models/code-generation.model"; // Import new model
 import { Schema } from "mongoose";
 
 export interface IStorage {
@@ -18,13 +19,15 @@ export interface IStorage {
 	updateUserSubscription(
 		userId: string,
 		status: string,
-		subscriptionId: string | null
+		subscriptionId: string | null,
+		subscriptionTier: string
 	): Promise<any>;
 
 	// User Credentials
 	createCredential(userId: string, credential: any): Promise<any>;
 	getUserCredentials(userId: string): Promise<any[]>;
 	getCredentialById(id: string): Promise<any | undefined>;
+	getDecryptedCredential(id: string): Promise<any | undefined>; // New method
 	deleteCredential(id: string): Promise<void>;
 
 	// Projects
@@ -57,6 +60,14 @@ export interface IStorage {
 	// Generated Configs
 	createGeneratedConfig(config: any): Promise<any>;
 	getProductConfigs(productId: string): Promise<any[]>;
+
+	// Code Generations
+	logCodeGeneration(
+		userId: string,
+		projectId: string,
+		productId: string,
+		backendStack: string
+	): Promise<any>;
 
 	// Stats
 	getUserStats(userId: string): Promise<any>;
@@ -113,12 +124,50 @@ export class DatabaseStorage implements IStorage {
 		return await Credential.findById(id);
 	}
 
+	async getDecryptedCredential(id: string) {
+		const credential = await Credential.findById(id);
+		if (!credential) {
+			return undefined;
+		}
+
+		// Decrypt API key and public key if they exist
+		const decryptedApiKey = credential.encryptedApiKey
+			? decryptApiKey(credential.encryptedApiKey)
+			: undefined;
+		const decryptedPublicKey = credential.encryptedPublicKey
+			? decryptApiKey(credential.encryptedPublicKey)
+			: undefined;
+
+		return {
+			...credential.toObject(), // Convert Mongoose document to plain object
+			apiKey: decryptedApiKey,
+			publicKey: decryptedPublicKey,
+			encryptedApiKey: undefined, // Remove encrypted versions
+			encryptedPublicKey: undefined,
+		};
+	}
+
 	async deleteCredential(id: string): Promise<void> {
 		await Credential.findByIdAndDelete(id);
 	}
 
 	// Projects
 	async createProject(userId: string, project: any) {
+		const user = await User.findById(userId);
+		if (!user) {
+			throw new Error("User not found.");
+		}
+
+		if (user.subscriptionTier === "free") {
+			const userProjects = await this.getUserProjects(userId);
+			if (userProjects.length >= 1) {
+				// Limit free tier to 1 project
+				throw new Error(
+					"Free plan users are limited to 1 project. Please upgrade to create more."
+				);
+			}
+		}
+
 		const newProject = new Project({
 			userId,
 			...project,
@@ -139,11 +188,26 @@ export class DatabaseStorage implements IStorage {
 	}
 
 	async deleteProject(id: string): Promise<void> {
-		await Project.findByIdAndDelete(id);
+		await Credential.findByIdAndDelete(id);
 	}
 
 	// Products
 	async createProduct(userId: string, projectId: string, product: any) {
+		const user = await User.findById(userId);
+		if (!user) {
+			throw new Error("User not found.");
+		}
+
+		if (user.subscriptionTier === "free") {
+			const projectProducts = await this.getProjectProducts(projectId);
+			if (projectProducts.length >= 1) {
+				// Limit free tier to 1 product per project
+				throw new Error(
+					"Free plan users are limited to 1 product per project. Please upgrade to create more."
+				);
+			}
+		}
+
 		const newProduct = new Product({
 			userId,
 			projectId,
@@ -205,21 +269,50 @@ export class DatabaseStorage implements IStorage {
 		return await GeneratedConfig.find({ productId });
 	}
 
+	// Code Generations
+	async logCodeGeneration(
+		userId: string,
+		projectId: string,
+		productId: string,
+		backendStack: string
+	) {
+		const newCodeGeneration = new CodeGeneration({
+			userId,
+			projectId,
+			productId,
+			backendStack,
+		});
+		return await newCodeGeneration.save();
+	}
+
 	// Stats
 	async getUserStats(userId: string) {
 		const userProjects = await this.getUserProjects(userId);
 		const userProducts = await this.getUserProducts(userId);
 		const credentials = await this.getUserCredentials(userId);
+		const totalCodeGenerations = await CodeGeneration.countDocuments({
+			userId,
+		});
 
 		const totalWebhooks = await Promise.all(
 			userProducts.map((p) => this.getProductWebhooks(p._id))
 		).then((results) => results.flat().length);
 
+		// Calculate estimated time saved
+		// Assumptions: 15 minutes per project setup, 10 minutes per product setup
+		const timeSavedPerProject = 15; // minutes
+		const timeSavedPerProduct = 20; // minutes
+		const estimatedTimeSaved =
+			userProjects.length * timeSavedPerProject +
+			userProducts.length * timeSavedPerProduct;
+
 		return {
 			totalProjects: userProjects.length,
 			totalProducts: userProducts.length,
+			totalCodeGenerations: totalCodeGenerations,
 			totalWebhooks,
 			platformsConnected: credentials.filter((c) => c.isActive).length,
+			estimatedTimeSaved: estimatedTimeSaved,
 		};
 	}
 
@@ -238,11 +331,13 @@ export class DatabaseStorage implements IStorage {
 	async updateUserSubscription(
 		userId: string,
 		status: string,
-		subscriptionId: string | null
+		subscriptionId: string | null,
+		subscriptionTier: string
 	) {
 		return await User.findByIdAndUpdate(userId, {
 			subscriptionStatus: status,
 			subscriptionId: subscriptionId,
+			subscriptionTier: subscriptionTier,
 		});
 	}
 
