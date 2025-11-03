@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Key, ArrowRight, Zap, Check, ShieldCheck, Cloud, Database } from "lucide-react";
+import { Key, ArrowRight, Zap, Check, ShieldCheck, Cloud, Database, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,7 @@ import { apiRequest } from "@/lib/apiRequest";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const ProviderCard = ({ provider, icon: Icon, title, description, children, onSubmit, isConnecting }) => (
+const ProviderCard = ({ provider, icon: Icon, title, description, children, onSubmit, isConnecting }: { provider: any, icon: any, title: any, description: any, children: any, onSubmit: any, isConnecting: any }) => (
     <Card>
         <form onSubmit={onSubmit}>
             <CardHeader>
@@ -63,7 +63,7 @@ export default function Onboarding() {
   // Mutation to create project if coming from dry-run
   const createProjectMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/projects", data),
-    onSuccess: (newProject) => {
+    onSuccess: (newProject: any) => {
         queryClient.invalidateQueries({ queryKey: ["projects"] });
         setCurrentProjectId(newProject.id);
         toast({ title: "Project Created!", description: "Now connect your payment providers." });
@@ -107,7 +107,7 @@ export default function Onboarding() {
 
   const directMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/credentials", data),
-    onSuccess: (data, variables) => {
+    onSuccess: (data, variables: any) => {
       toast({ title: `${variables.provider} Connected!`, description: `Your account is now linked.` });
       // After connecting one, check if there are others to connect or redirect
       if (variables.provider === "stripe" && lemonSqueezyKeys.apikey && !directMutation.isPending) {
@@ -140,6 +140,7 @@ export default function Onboarding() {
 
   const handleDopplerStep2Submit = (e: React.FormEvent) => {
       e.preventDefault();
+      const secrets = {};
       dopplerMutation.mutate({ dopplerToken, projectName, environmentName, secrets: { ...secrets, stripe_sk: stripeKeys.sk, stripe_whsec: stripeKeys.whsec, lemonsqueezy_apikey: lemonSqueezyKeys.apikey, lemonsqueezy_whsec: lemonSqueezyKeys.whsec } });
   };
 
@@ -171,7 +172,7 @@ export default function Onboarding() {
           <p className="text-muted-foreground text-lg">Choose how you want to manage your payment provider credentials.</p>
         </div>
 
-        <Tabs value={mode} onValueChange={(value: "doppler" | "direct") => setMode(value)} className="mb-8">
+        <Tabs value={mode} onValueChange={(value: string) => setMode(value as "doppler" | "direct")} className="mb-8">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="doppler"><Cloud className="mr-2 h-4 w-4" />Connect with Doppler</TabsTrigger>
                 <TabsTrigger value="direct"><Database className="mr-2 h-4 w-4" />Enter Keys Directly</TabsTrigger>

@@ -16,7 +16,7 @@ const menuItems = [
     { icon: Settings, label: "Settings", href: "/dashboard/settings" },
 ];
 
-const CodeBlock = ({ code }) => {
+const CodeBlock = ({ code }: { code: any }) => {
     const { toast } = useToast();
     const [hasCopied, setHasCopied] = useState(false);
 
@@ -39,8 +39,7 @@ const CodeBlock = ({ code }) => {
 
 export default function GenerationGuidePage() {
     const { projectId } = useParams();
-    const { state } = useLocation();
-    const { generatedCode, product } = state || {};
+    const { generatedCode, product } = history.state as any || {};
 
     if (!generatedCode || !product) {
         return (

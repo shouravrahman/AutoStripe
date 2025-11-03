@@ -8,7 +8,13 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/apiRequest";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-// ... [interfaces and skeletons remain the same] ...
+const ProjectListSkeleton = () => (
+    <div className="space-y-4">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
+    </div>
+);
 
 const EmptyState = () => (
     <Card className="text-center p-12 border-2 border-dashed">

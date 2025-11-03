@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/apiRequest";
+import { AxiosError } from "axios";
 
 export const useAuth = () => {
   const { data, isLoading, error } = useQuery({
@@ -9,7 +10,7 @@ export const useAuth = () => {
         const response = await apiRequest<any>("GET", "/api/auth/user");
         return response;
       } catch (error) {
-        if (error.response?.status === 401) {
+        if (error instanceof AxiosError && error.response?.status === 401) {
           // Not authenticated, return null
           return null;
         }

@@ -14,7 +14,7 @@ import { apiRequest } from "@/lib/apiRequest";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const EmptyState = ({ onAddClick }) => (
+const EmptyState = ({ onAddClick }: { onAddClick: any }) => (
     <div className="text-center p-12 border-2 border-dashed rounded-lg">
         <Key className="mx-auto h-12 w-12 text-muted-foreground/50" />
         <h3 className="mt-4 text-lg font-semibold">No Credentials Yet</h3>
@@ -23,7 +23,7 @@ const EmptyState = ({ onAddClick }) => (
     </div>
 );
 
-const AddEditCredentialDialog = ({ open, setOpen, credential }) => {
+const AddEditCredentialDialog = ({ open, setOpen, credential }: { open: any, setOpen: any, credential: any }) => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const [provider, setProvider] = useState('stripe');
@@ -103,7 +103,7 @@ const AddEditCredentialDialog = ({ open, setOpen, credential }) => {
     );
 }
 
-const CredentialCard = ({ credential, onEdit, onDelete }) => (
+const CredentialCard = ({ credential, onEdit, onDelete }: { credential: any, onEdit: any, onDelete: any }) => (
     <Card>
         <CardHeader className="flex flex-row items-start justify-between">
             <div>

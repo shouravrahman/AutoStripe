@@ -36,7 +36,7 @@ export default function Signup() {
 
   const signupMutation = useMutation({
     mutationFn: (signupData: typeof formData) => apiRequest("POST", "/api/auth/signup", signupData),
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       toast({ title: "Account Created!", description: "Welcome to AutoBill. Let's get you set up." });
       // If dryRunData exists, pass it along to onboarding
       if (dryRunData) {

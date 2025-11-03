@@ -6,7 +6,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
-const StatCard = ({ title, value, icon: Icon, isLoading }) => (
+const StatCard = ({ title, value, icon: Icon, isLoading }: { title: any, value: any, icon: any, isLoading: any }) => (
     <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{title}</CardTitle>

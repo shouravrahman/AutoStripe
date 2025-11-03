@@ -3,10 +3,12 @@ import { storage } from "../storage";
 import { StripeService } from "../services/stripe";
 import { LemonSqueezyService } from "../services/lemonsqueezy";
 import crypto from "crypto";
-import { codeGenerationService } from "../services/code-generation";
+import { CodeGenerationService } from "../services/code-generation";
 import ProductModel from "../models/product.model"; // Import Product model for type checking
 import archiver from "archiver"; // Import archiver
 import Project from "../models/project.model"; // Import Project model
+
+const codeGenerationService = new CodeGenerationService();
 
 // GET /api/products - Fetch all products for the logged-in user, optionally filtered by project
 export const getProducts = async (req: any, res: Response) => {

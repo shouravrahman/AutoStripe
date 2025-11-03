@@ -35,7 +35,7 @@ export default function Login() {
     mutationFn: (loginData: typeof formData) => apiRequest("POST", "/api/auth/login", loginData),
     onSuccess: async () => {
       toast({ title: "Welcome back!", description: "Redirecting to your dashboard..." });
-      const stats = await apiRequest("GET", "/api/stats");
+      const stats: any = await apiRequest("GET", "/api/stats");
       setLocation(stats.totalProjects === 0 ? "/onboarding" : "/dashboard");
     },
     onError: (error: any) => {

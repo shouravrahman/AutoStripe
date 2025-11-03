@@ -1,4 +1,4 @@
-🚀 SaaS Idea: “AutoBill” (Working Name)
+🚀 SaaS Idea: “StripeSyncer”
 
 Tagline:
 Instantly set up LemonSqueezy and Stripe products, plans, and webhooks for your new SaaS — in one click.
@@ -98,7 +98,7 @@ Bulk product cloning
 
 Template library (e.g. “3-tier SaaS template”, “Freemium model”, “Lifetime deal setup”)
 
-CLI tool (e.g. autobill init)
+CLI tool (e.g. stripesyncer init)
 
 🧰 Bonus Developer Tools
 

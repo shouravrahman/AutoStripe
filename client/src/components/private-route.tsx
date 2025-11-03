@@ -1,7 +1,12 @@
-import { Route, Redirect } from "wouter";
+import { Route, Redirect, RouteProps } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 
-export const PrivateRoute = (props) => {
+interface PrivateRouteProps extends RouteProps {
+  adminOnly?: boolean;
+  proRequired?: boolean;
+}
+
+export const PrivateRoute = (props: PrivateRouteProps) => {
   const { user, isLoading } = useAuth();
    console.log("PrivateRoute user:", user);
 

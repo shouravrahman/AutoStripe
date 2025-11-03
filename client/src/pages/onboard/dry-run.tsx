@@ -50,7 +50,7 @@ export default function DryRunPage() {
 
     const finalCreateMutation = useMutation({
         mutationFn: (data: any) => apiRequest("POST", "/api/projects", data),
-        onSuccess: (newProject) => {
+        onSuccess: (newProject: any) => {
             queryClient.invalidateQueries({ queryKey: ["projects"] });
             toast({ title: "Project Created!", description: "Next, connect your payment providers." });
             setLocation(`/onboarding?projectId=${newProject.id}`);
@@ -63,11 +63,11 @@ export default function DryRunPage() {
     const suggestPricingMutation = useMutation({
         mutationFn: (data: { productName: string; productDescription: string; existingPricingPlans: any[] }) =>
             apiRequest<AIPricingSuggestionResponse>("POST", "/api/ai/suggest", data),
-        onSuccess: (data) => {
+        onSuccess: (data: any) => {
             if (data.refinedDescription) setProductDescription(data.refinedDescription);
 
             if (data.pricingTiers && data.pricingTiers.length > 0) {
-                const formattedPlans = data.pricingTiers.map(plan => ({
+                const formattedPlans = data.pricingTiers.map((plan: any) => ({
                     name: plan.name,
                     price: plan.price * 100, // Convert to cents
                     interval: plan.interval,
@@ -91,7 +91,7 @@ export default function DryRunPage() {
             if (!productName || pricingPlans.length === 0) return;
             setIsPreviewLoading(true);
             try {
-                const response = await apiRequest("POST", "/api/ai/preview-code", {
+                const response: any = await apiRequest("POST", "/api/ai/preview-code", {
                     productData: { name: productName, description: productDescription },
                     pricingPlans,
                     backendStack,
@@ -187,7 +187,7 @@ export default function DryRunPage() {
                             </Button>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {pricingPlans.map((plan, index) => (
+                            {pricingPlans.map((plan: any, index: any) => (
                                 <Card key={index} className="p-4 bg-muted/30">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2"><Label>Plan Name</Label><Input value={plan.name} onChange={e => handlePlanChange(index, 'name', e.target.value)} /></div>

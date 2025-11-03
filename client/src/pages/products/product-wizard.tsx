@@ -26,7 +26,7 @@ const templates = [
     { id: 'custom', name: 'Custom', description: 'Start from a blank slate.', plans: [] },
 ];
 
-const ProgressStep = ({ num, label, isActive }) => (
+const ProgressStep = ({ num, label, isActive }: { num: any, label: any, isActive: any }) => (
     <div className="flex flex-col items-center gap-2">
         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${isActive ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>{num}</div>
         <p className={`text-sm font-semibold ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>{label}</p>
@@ -41,7 +41,7 @@ export default function ProductWizardPage() {
     const [step, setStep] = useState(0);
 
     const [productData, setProductData] = useState({ name: "", description: "" });
-    const [variants, setVariants] = useState([]);
+    const [variants, setVariants] = useState<any[]>([]);
     const [techStack, setTechStack] = useState({ backend: 'nextjs-api' });
     const [integrations, setIntegrations] = useState({ stripe: true, lemonsqueezy: false });
 
@@ -55,15 +55,15 @@ export default function ProductWizardPage() {
         onError: (err: Error) => toast({ title: 'Generation Failed', description: err.message, variant: 'destructive' })
     });
 
-    const handleTemplateSelect = (templateId) => {
+    const handleTemplateSelect = (templateId: any) => {
         const t = templates.find(tmp => tmp.id === templateId);
         if(t) setVariants(t.plans.map(p => ({ ...p, isUsageBased: templateId === 'payg' })));
         setStep(1);
     };
 
     const handleAddVariant = () => setVariants([...variants, { name: '', price: 0, interval: 'month', features: '', isUsageBased: false }]);
-    const handleRemoveVariant = (index) => setVariants(variants.filter((_, i) => i !== index));
-    const handleUpdateVariant = (index, field, value) => {
+    const handleRemoveVariant = (index: any) => setVariants(variants.filter((_, i) => i !== index));
+    const handleUpdateVariant = (index: any, field: any, value: any) => {
         const newVariants = [...variants];
         newVariants[index][field] = value;
         setVariants(newVariants);
@@ -109,7 +109,7 @@ export default function ProductWizardPage() {
                 <Card>
                     <CardHeader><CardTitle>Pricing Plans</CardTitle><CardDescription>Define the pricing tiers for your product.</CardDescription></CardHeader>
                     <CardContent className="space-y-4">
-                        {variants.map((v, i) => (
+                        {variants.map((v: any, i: any) => (
                             <Card key={i} className="p-4 bg-muted/50"><div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2"><Label>Plan Name</Label><Input value={v.name} onChange={e => handleUpdateVariant(i, 'name', e.target.value)} /></div>
                                 <div className="space-y-2"><Label>Price (in cents)</Label><Input type="number" value={v.price} onChange={e => handleUpdateVariant(i, 'price', parseInt(e.target.value))}/></div>

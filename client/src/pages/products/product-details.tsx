@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
-const CopyableField = ({ label, value }) => {
+const CopyableField = ({ label, value }: { label: any, value: any }) => {
     const { toast } = useToast();
     const [hasCopied, setHasCopied] = useState(false);
     const copyToClipboard = () => {
@@ -84,7 +84,7 @@ export default function ProductDetailsPage() {
                             <Card>
                                 <CardHeader><CardTitle>Pricing Plans</CardTitle></CardHeader>
                                 <CardContent className="space-y-4">
-                                    {product.variants?.length > 0 ? product.variants.map(v => (
+                                    {product.variants?.length > 0 ? product.variants.map((v: any) => (
                                         <Card key={v.id} className="p-4">
                                             <div className="flex justify-between items-start mb-2">
                                                 <div>

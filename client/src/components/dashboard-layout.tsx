@@ -5,6 +5,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Logo } from "@/components/logo";
 import { LayoutDashboard, FolderOpen, Package, Key, Settings, LogOut, ArrowLeft } from "lucide-react";
 import { ReactNode } from "react";
+import { apiRequest } from "@/lib/apiRequest";
+import { queryClient } from "@/lib/queryClient";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },

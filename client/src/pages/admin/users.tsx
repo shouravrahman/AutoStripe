@@ -12,13 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const UserRow = ({ user }) => {
+const UserRow = ({ user }: { user: any }) => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
     const mutationOptions = {
         onSuccess: () => {
-            toast({ title: "User Updated", description: "The user\'s status has been changed." });
+            toast({ title: "User Updated", description: "The user's status has been changed." });
             queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
         },
         onError: (error: Error) => toast({ title: "Update Failed", description: error.message, variant: "destructive" })
@@ -91,7 +91,7 @@ export default function AdminUsersPage() {
                     <Table>
                         <TableHeader><TableRow><TableHead>User</TableHead><TableHead>Role</TableHead><TableHead>Subscription</TableHead><TableHead>Joined</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                         <TableBody>
-                            {isLoading ? <UsersSkeleton /> : filteredUsers?.length > 0 ? (
+                            {isLoading ? <UsersSkeleton /> : (filteredUsers && filteredUsers.length > 0) ? (
                                 filteredUsers.map(user => <UserRow key={user.id} user={user} />)
                             ) : (
                                 <TableRow><TableCell colSpan={5} className="text-center h-24">No users found.</TableCell></TableRow>

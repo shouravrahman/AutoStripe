@@ -28,14 +28,14 @@ export default function ProjectDetailsPage() {
         enabled: !!projectId && /^[0-9a-fA-F]{24}$/.test(projectId),
     });
 
-    const { data: products, isLoading: isLoadingProducts } = useQuery({
+    const { data: products, isLoading: isLoadingProducts } = useQuery<any>({
         queryKey: ["products", { projectId }],
         queryFn: () => apiRequest("GET", `/api/products?projectId=${projectId}`),
         // Prevent this query from running on pages like '/projects/create'
         enabled: !!projectId && /^[0-9a-fA-F]{24}$/.test(projectId),
     });
 
-    if (isError) return <div className="p-8">Error: {error.message}</div>;
+    if (isError) return <div className="p-8">Error: {(error as Error).message}</div>;
 
     return (
         <div>
@@ -47,9 +47,9 @@ export default function ProjectDetailsPage() {
                             <Button asChild size="sm"><Link href={`/dashboard/products/new?projectId=${projectId}`}><Plus className="h-4 w-4 mr-2"/>New Product</Link></Button>
                         </CardHeader>
                         <CardContent>
-                            {isLoadingProducts ? <Skeleton className="h-10"/> : products?.length > 0 ? (
+                            {isLoadingProducts ? <Skeleton className="h-10"/> : products && products.length > 0 ? (
                                 <div className="divide-y">
-                                    {products.map(p => (
+                                    {products.map((p: any) => (
                                         <Link key={p.id} href={`/dashboard/products/${p.id}`}>
                                             <div className="p-3 flex items-center justify-between hover:bg-muted/50 cursor-pointer">
                                                 <p className="font-medium">{p.name}</p>

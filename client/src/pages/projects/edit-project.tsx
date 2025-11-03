@@ -63,7 +63,7 @@ export default function EditProjectPage() {
     onError: (error: Error) => toast({ title: "Update Failed", description: error.message, variant: "destructive" }),
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: any) => {
     e.preventDefault();
     mutation.mutate(formData);
   };
