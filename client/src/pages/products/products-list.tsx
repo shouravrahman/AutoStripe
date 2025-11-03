@@ -73,11 +73,11 @@ export default function ProductsList() {
                     {products.map((product) => (
                         <Link key={product.id} href={`/dashboard/products/${product.id}`}>
                             <div className="p-4 flex items-center justify-between hover:bg-muted/50 cursor-pointer">
-                                <div className="flex items-center gap-4 flex-grow">
+                             <div className="flex items-center gap-4 grow">
                                     <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
                                         <Package className="h-5 w-5 text-primary" />
                                     </div>
-                                    <div className="flex-grow">
+                                <div className="grow">
                                         <p className="font-semibold text-sm">{product.name}</p>
                                         <p className="text-xs text-muted-foreground line-clamp-1">{product.description || 'No description'}</p>
                                     </div>

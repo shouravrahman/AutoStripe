@@ -2,8 +2,8 @@ import { useLocation, useParams, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Copy, Check, Zap, LayoutDashboard, Folder, Package, Key, Settings, LogOut, FileCode } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, Copy, Check, Zap, LayoutDashboard, Folder, Package, Key, Settings, LogOut, FileCode, Download } from "lucide-react";
+import { toast, useToast } from "@/hooks/use-toast";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useState } from "react";
@@ -55,6 +55,14 @@ export default function GenerationGuidePage() {
 
     const filePaths = Object.keys(generatedCode);
 
+   const handleDownload = () => {
+      if (product?.id && product?.backendStack) {
+         window.location.href = `/api/ai/download-code?productId=${product.id}&backendStack=${product.backendStack}`;
+      } else {
+         toast({ title: "Error", description: "Could not retrieve product ID or backend stack for download.", variant: "destructive" });
+      }
+   };
+
     return (
         <SidebarProvider>
             <div className="flex h-screen w-full bg-muted/40">
@@ -71,17 +79,20 @@ export default function GenerationGuidePage() {
                     <header className="flex items-center justify-between p-4 border-b bg-background h-16"><SidebarTrigger /><ThemeToggle /></header>
                     <main className="flex-1 overflow-auto p-4 sm:p-8">
                         <div className="max-w-4xl mx-auto">
-                            <div className="mb-8">
-                                <Button variant="ghost" asChild className="mb-4"><Link href={`/dashboard/products/${product.id}`}><ArrowLeft className="h-4 w-4 mr-2" />Back to Product</Link></Button>
-                                <h1 className="text-3xl font-extrabold tracking-tight">Implementation Guide</h1>
-                                <p className="text-muted-foreground">Code for "{product.name}" has been generated. Follow the steps below.</p>
-                            </div>
+                      <div className="mb-8 flex items-center justify-between">
+                         <div>
+                            <Button variant="ghost" asChild className="mb-4"><Link href={`/dashboard/products/${product.id}`}><ArrowLeft className="h-4 w-4 mr-2" />Back to Product</Link></Button>
+                            <h1 className="text-3xl font-extrabold tracking-tight">Implementation Guide</h1>
+                            <p className="text-muted-foreground">Code for "{product.name}" has been generated. Follow the steps below.</p>
+                         </div>
+                         <Button onClick={handleDownload}><Download className="h-4 w-4 mr-2" />Download All (.zip)</Button>
+                      </div>
 
                             <Card className="mb-8">
                                 <CardHeader><CardTitle>1. Review Generated Code</CardTitle><CardDescription>The following files have been created. Integrate them into your existing codebase.</CardDescription></CardHeader>
                                 <CardContent>
                                     <Tabs defaultValue={filePaths[0]}>
-                                        <TabsList className="grid w-full grid-cols-3 mb-4"><{filePaths.map(p => <TabsTrigger key={p} value={p}>{p.split('/').pop()}</TabsTrigger>)}</TabsList>
+                               <TabsList className="grid w-full grid-cols-3 mb-4">{filePaths.map(p => <TabsTrigger key={p} value={p}>{p.split('/').pop()}</TabsTrigger>)}</TabsList>
                                         {filePaths.map(p => <TabsContent key={p} value={p}><CodeBlock code={generatedCode[p]} /></TabsContent>)}
                                     </Tabs>
                                 </CardContent>

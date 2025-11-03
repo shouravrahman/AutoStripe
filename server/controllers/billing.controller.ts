@@ -21,6 +21,17 @@ export const webhook = async (req: Request, res: Response) => {
     const { event_name, data } = req.body;
     const userId = data.attributes.custom_data.user_id;
 
+    let subscriptionTier: string = "free"; // Default to free
+
+    // TODO: Extract the actual tier from the webhook data. This depends on how you map Lemon Squeezy variants to your internal tiers.
+    // For example, if data.attributes.variant_id corresponds to a specific tier.
+    // Placeholder logic:
+    if (data.attributes.variant_id === process.env.LEMONSQUEEZY_PRO_VARIANT_ID) {
+        subscriptionTier = "pro";
+    } else if (data.attributes.variant_id === process.env.LEMONSQUEEZY_FREE_VARIANT_ID) {
+        subscriptionTier = "free";
+    }
+
     switch (event_name) {
       case "subscription_created":
       case "subscription_updated":
@@ -28,11 +39,15 @@ export const webhook = async (req: Request, res: Response) => {
         await storage.updateUserSubscription(
           userId,
           data.attributes.status,
-          subscriptionId
+          subscriptionId,
+          subscriptionTier // Pass the tier
         );
         break;
       case "subscription_cancelled":
-        await storage.updateUserSubscription(userId, "free", null);
+        await storage.updateUserSubscription(userId, "cancelled", null, "free"); // Revert to free tier on cancellation
+        break;
+      case "order_created": // Handle one-time purchases if applicable
+        // TODO: Implement logic for one-time purchases if they grant a specific tier/feature
         break;
     }
 

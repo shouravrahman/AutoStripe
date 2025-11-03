@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/apiRequest";
-import { DollarSign, FolderOpen, Package, Activity, Plus, Zap } from "lucide-react";
+import { DollarSign, FolderOpen, Package, Activity, Plus, Zap, Clock, Code, Plug } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -47,10 +47,11 @@ export default function Dashboard() {
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-            <StatCard title="Total Revenue" value={`$${stats?.totalRevenue || 0}`} icon={DollarSign} isLoading={isLoading} />
-            <StatCard title="Total Projects" value={stats?.totalProjects || 0} icon={FolderOpen} isLoading={isLoading} />
-            <StatCard title="Products Created" value={stats?.totalProducts || 0} icon={Package} isLoading={isLoading} />
-            <StatCard title="Active Webhooks" value={stats?.totalWebhooks || 0} icon={Activity} isLoading={isLoading} />
+            <StatCard title="Projects" value={stats?.totalProjects || 0} icon={FolderOpen} isLoading={isLoading} />
+            <StatCard title="Products" value={stats?.totalProducts || 0} icon={Package} isLoading={isLoading} />
+            <StatCard title="Time Saved (min)" value={stats?.estimatedTimeSaved || 0} icon={Clock} isLoading={isLoading} />
+            <StatCard title="Code Generations" value={stats?.totalCodeGenerations || 0} icon={Code} isLoading={isLoading} />
+            {/* <StatCard title="Platforms Connected" value={stats?.platformsConnected || 0} icon={Plug} isLoading={isLoading} /> */}
         </div>
 
         {/* Recent Activity */}

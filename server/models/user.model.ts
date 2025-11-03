@@ -25,6 +25,10 @@ const userSchema = new Schema(
 			type: String,
 			default: "free",
 		},
+		subscriptionTier: {
+			type: String,
+			default: "free",
+		},
 		subscriptionId: {
 			type: String,
 		},

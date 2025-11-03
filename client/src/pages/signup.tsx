@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { Github, Zap } from "lucide-react";
@@ -31,11 +31,19 @@ export default function Signup() {
   const { toast } = useToast();
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
 
+  // Access dryRunData from history.state
+  const { dryRunData } = history.state as any || {};
+
   const signupMutation = useMutation({
     mutationFn: (signupData: typeof formData) => apiRequest("POST", "/api/auth/signup", signupData),
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({ title: "Account Created!", description: "Welcome to AutoBill. Let's get you set up." });
-      setLocation("/onboarding");
+      // If dryRunData exists, pass it along to onboarding
+      if (dryRunData) {
+        setLocation("/onboarding", { state: { dryRunData, userId: data.userId } }); // Assuming API returns userId
+      } else {
+        setLocation("/onboarding");
+      }
     },
     onError: (error: any) => {
       toast({ title: "Sign Up Failed", description: error.message, variant: "destructive" });

@@ -47,7 +47,7 @@ export default function ProductDetailsPage() {
     const { data: product, isLoading, isError, error } = useQuery<any>({
         queryKey: ["product", productId],
         queryFn: () => apiRequest("GET", `/api/products/${productId}`),
-        enabled: !!productId,
+        enabled: !!productId && /^[0-9a-fA-F]{24}$/.test(productId),
     });
 
     if (isError) return <div className="p-8">Error: {(error as Error).message}</div>;

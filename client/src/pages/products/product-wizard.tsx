@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useParams, Link } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Check, Zap, LayoutDashboard, Folder, Package, Key, Settings, LogOut, Loader2, Wand2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, LayoutDashboard, Folder, Package, Key, Settings, Loader2, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/apiRequest";
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const menuItems = [
@@ -81,7 +79,7 @@ export default function ProductWizardPage() {
         <div className="max-w-3xl mx-auto">
             <Button variant="ghost" asChild className="mb-4"><Link href={`/dashboard/projects/${projectId}`}><ArrowLeft className="h-4 w-4 mr-2" />Back to Project</Link></Button>
             <div className="flex justify-around items-center my-8 p-4 bg-background rounded-lg shadow-sm">{steps.map((s, i) => <ProgressStep key={i} num={i + 1} label={s} isActive={step >= i} />)}</div>
-            
+
             {step === 0 && (
                 <Card>
                     <CardHeader><CardTitle>Choose a Template</CardTitle><CardDescription>Select a starting point for your product.</CardDescription></CardHeader>

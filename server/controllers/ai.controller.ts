@@ -2,45 +2,37 @@ import { Request, Response } from "express";
 import { aiService } from "../services/ai";
 import { codeGenerationService } from "../services/code-generation";
 import Product from "../models/product.model";
+import archiver from "archiver";
+import { storage } from "../storage"; // Import storage
 
 export const getSuggestions = async (req: Request, res: Response) => {
-	const { name, description, features, targetAudience } = req.body;
+	const { productName, productDescription, existingPricingPlans } = req.body;
 
-	if (!name) {
-		return res.status(400).json({ message: "Product name is required." });
+	// @ts-ignore
+	const userId = req.user.id;
+	if (!userId) {
+		return res.status(401).json({ message: "Not authenticated." });
 	}
 
-	const prompt = `
-        Act as an expert SaaS consultant and product strategist. Your goal is to help a developer make their new product, "${name}", as profitable as possible.
-
-        Here is the current product information:
-        - Description: "${description || "Not provided."}"
-        - Features: "${features || "Not provided."}"
-        - Target Audience: "${targetAudience || "Not provided."}"
-
-        Based on this, provide the following in a clear, structured JSON format. Do not include any explanatory text outside of the JSON structure.
-
-        Your response must be a single JSON object with these exact keys: "refinedDescription", "pricingTiers".
-
-        1.  **refinedDescription**: Rewrite the product description to be more compelling, benefit-oriented, and marketable. It should be a single string of text.
-
-        2.  **pricingTiers**: Suggest three distinct pricing tiers (e.g., Basic, Pro, Enterprise). For each tier, provide:
-            -   **name**: The name of the tier (e.g., "Starter", "Growth", "Scale").
-            -   **price**: A suggested monthly price in USD (e.g., 19, 49, 99). Just the number.
-            -   **features**: A bulleted list of 3-5 key features for that tier. Be specific about what a user gets at each level to encourage upgrades.
-            -   **justification**: A brief explanation of why this pricing is suitable for the target audience and the value provided, considering potential operational costs and market competition.
-
-        Example of a single pricing tier object:
-        {
-            "name": "Pro",
-            "price": 49,
-            "features": ["- Feature A", "- Feature B", "- Priority Support"],
-            "justification": "This tier is priced for small teams who need more advanced features, offering a clear upgrade path from the basic plan."
-        }
-    `;
-
 	try {
-		const rawResponse = await aiService.getSuggestions(prompt);
+		const user = await storage.getUser(userId);
+		if (!user) {
+			return res.status(404).json({ message: "User not found." });
+		}
+
+		if (user.subscriptionTier === "free") {
+			return res.status(403).json({ message: "AI suggestions are a Pro feature. Please upgrade your plan." });
+		}
+
+		if (!productName) {
+			return res.status(400).json({ message: "Product name is required." });
+		}
+
+		const rawResponse = await aiService.getSuggestions(
+			productName,
+			productDescription || "",
+			existingPricingPlans || []
+		);
 		// Clean the response to ensure it's valid JSON
 		const jsonResponse = rawResponse
 			.replace(/```json/g, "")
@@ -70,7 +62,6 @@ export const generateCode = async (req: Request, res: Response) => {
 			return res.status(404).json({ message: "Product not found." });
 		}
 
-		// Determine which payment providers are being used
 		const paymentProviders: ("stripe" | "lemonsqueezy")[] = [];
 		if (product.plans.some(p => p.stripePriceId)) {
 			paymentProviders.push("stripe");
@@ -84,6 +75,10 @@ export const generateCode = async (req: Request, res: Response) => {
 			paymentProviders,
 		});
 
+		// Log the code generation event
+		// @ts-ignore
+		await storage.logCodeGeneration(req.user.id, product.projectId, product._id, backendStack);
+
 		res.json({ code: generatedCode });
 	} catch (error: any) {
 		console.error("Code generation failed:", error);
@@ -91,4 +86,91 @@ export const generateCode = async (req: Request, res: Response) => {
 			message: "Failed to generate code. Please try again.",
 		});
 	}
+};
+
+export const previewCode = async (req: Request, res: Response) => {
+    const { productData, pricingPlans, backendStack, paymentProviders } = req.body;
+
+    if (!productData || !pricingPlans || !backendStack || !paymentProviders) {
+        return res.status(400).json({ message: "Missing required parameters for preview." });
+    }
+
+    try {
+        const tempProduct = {
+            name: productData.name,
+            description: productData.description,
+            plans: pricingPlans.map(p => ({
+                ...p,
+                stripePriceId: paymentProviders.includes('stripe') ? 'price_mock_12345' : null,
+                lemonSqueezyVariantId: paymentProviders.includes('lemonsqueezy') ? 'variant_mock_12345' : null,
+            })),
+            userId: req.session.userId,
+        };
+
+        const generatedCode = codeGenerationService.generateCode(tempProduct as any, {
+            backendStack,
+            paymentProviders,
+        });
+
+        res.json({ code: generatedCode });
+
+    } catch (error: any) {
+        console.error("Code preview failed:", error);
+        res.status(500).json({
+            message: "Failed to generate code preview. Please try again.",
+        });
+    }
+};
+
+export const downloadCode = async (req: Request, res: Response) => {
+    const { productId, backendStack } = req.query;
+
+    if (!productId || !backendStack) {
+        return res.status(400).json({ message: "Product ID and backend stack are required." });
+    }
+
+    try {
+        const product = await Product.findById(productId).populate("plans");
+        if (!product) {
+            return res.status(404).json({ message: "Product not found." });
+        }
+
+        const paymentProviders: ("stripe" | "lemonsqueezy")[] = [];
+        if (product.plans.some(p => p.stripePriceId)) paymentProviders.push("stripe");
+        if (product.plans.some(p => p.lemonSqueezyVariantId)) paymentProviders.push("lemonsqueezy");
+
+        const generatedCode = codeGenerationService.generateCode(product, {
+            backendStack: backendStack as string,
+            paymentProviders,
+        });
+
+        const archive = archiver('zip', {
+            zlib: { level: 9 } // Sets the compression level.
+        });
+
+        archive.on('error', function(err) {
+            throw err;
+        });
+
+        // Set the headers
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename=${product.name.replace(/\s+/g, '-').toLowerCase()}-autobill.zip`);
+
+        // Pipe archive data to the response
+        archive.pipe(res);
+
+        // Append files from the generatedCode object
+        for (const [filePath, content] of Object.entries(generatedCode)) {
+            archive.append(content, { name: filePath });
+        }
+
+        // Finalize the archive (ie we are done appending files but streams have to finish yet)
+        await archive.finalize();
+
+    } catch (error: any) {
+        console.error("Code download failed:", error);
+        res.status(500).json({
+            message: "Failed to generate code for download.",
+        });
+    }
 };

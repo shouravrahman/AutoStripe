@@ -30,7 +30,7 @@ export const getProjectById = async (req: any, res: Response) => {
 
 // POST /api/projects - Create a new project
 export const createProject = async (req: any, res: Response) => {
-	const { name } = req.body;
+	const { name, backendStack } = req.body;
 
 	if (!name || typeof name !== "string" || name.trim().length === 0) {
 		return res.status(400).json({ message: "Project name is required" });
@@ -53,6 +53,7 @@ export const createProject = async (req: any, res: Response) => {
 
 		const project = await storage.createProject(req.user.id, {
 			name: name.trim(),
+			backendStack: backendStack || "nextjs-api", // Default to nextjs-api if not provided
 		});
 		res.status(201).json(project);
 	} catch (error) {

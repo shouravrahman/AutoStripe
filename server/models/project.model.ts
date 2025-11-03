@@ -21,6 +21,11 @@ const projectSchema = new Schema(
 			required: true,
 			default: "active",
 		},
+		backendStack: {
+			type: String,
+			required: true,
+			default: "nextjs-api",
+		},
 	},
 	{ timestamps: true, toJSON: { virtuals: true } }
 );

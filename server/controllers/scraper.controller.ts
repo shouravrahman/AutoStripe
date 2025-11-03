@@ -4,20 +4,28 @@ import { scraperService } from "../services/scraper";
 
 export const extractProductInfo = async (req: Request, res: Response) => {
   try {
-    const userId = req.session?.userId;
-    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+    const { url, isPublic } = req.body;
 
-    const user = await storage.getUser(userId);
-    if (user?.subscriptionStatus === "free") {
-      return res
-        .status(403)
-        .json({ message: "Upgrade to Pro to use web scraping." });
+    // If the scrape is not from a public entry point, enforce auth and subscription checks
+    if (!isPublic) {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+      const user = await storage.getUser(userId);
+      if (user?.subscriptionStatus === "free") {
+        return res
+          .status(403)
+          .json({ message: "Upgrade to Pro to use web scraping." });
+      }
     }
 
-    const { url } = req.body;
-    const extractedData = await scraperService.extractProductInfo(url);
+    if (!url) {
+        return res.status(400).json({ message: "URL is required." });
+    }
 
-    res.json({ extractedData });
+    const result = await scraperService.extractProductInfo(url);
+
+    res.json(result);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

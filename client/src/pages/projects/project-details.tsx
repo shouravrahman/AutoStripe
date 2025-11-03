@@ -25,13 +25,14 @@ export default function ProjectDetailsPage() {
     const { data: project, isLoading, isError, error } = useQuery({
         queryKey: ["projects", projectId],
         queryFn: () => apiRequest("GET", `/api/projects/${projectId}`),
-        enabled: !!projectId,
+        enabled: !!projectId && /^[0-9a-fA-F]{24}$/.test(projectId),
     });
 
     const { data: products, isLoading: isLoadingProducts } = useQuery({
         queryKey: ["products", { projectId }],
         queryFn: () => apiRequest("GET", `/api/products?projectId=${projectId}`),
-        enabled: !!projectId,
+        // Prevent this query from running on pages like '/projects/create'
+        enabled: !!projectId && /^[0-9a-fA-F]{24}$/.test(projectId),
     });
 
     if (isError) return <div className="p-8">Error: {error.message}</div>;
