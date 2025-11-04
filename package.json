@@ -9,7 +9,7 @@
       "dev:all": "concurrently \"npm run dev:server\" \"npm run dev --workspace=client\"",
       "dev": "npm run dev --workspace=client",
       "dev:server": "nodemon --exec tsx -r dotenv/config server/index.ts",
-      "build:server": "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=server/dist",
+      "build:server": "npm install && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=server/dist",
       "start": "node server/dist/index.js",
       "check:server": "node_modules/typescript/bin/tsc --project server/tsconfig.json"
    },
