@@ -13,6 +13,10 @@ export default defineConfig({
     },
   },
 
+  optimizeDeps: {
+    include: ["framer-motion"],
+  },
+
   build: {
     outDir: "dist",
     emptyOutDir: true,
