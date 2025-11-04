@@ -24,7 +24,9 @@ export async function apiRequest<T>(
 		options.body = JSON.stringify(body);
 	}
 
-	const response = await fetch(url, options);
+	const baseUrl = import.meta.env.VITE_API_BASE_URL;
+	const fullUrl = `${baseUrl}${url}`;
+	const response = await fetch(fullUrl, options);
 
 	if (!response.ok) {
 		const errorData = await response
